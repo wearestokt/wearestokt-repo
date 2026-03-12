@@ -1,0 +1,12 @@
+{
+  "name": "stokt-notion-automation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed-project-tasks": "node seed-project-tasks.mjs"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  }
+}

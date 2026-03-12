@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "functions": {
+    "api/seed-tasks.js": {
+      "maxDuration": 30
+    }
+  }
+}

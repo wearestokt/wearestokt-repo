@@ -1,0 +1,26 @@
+name: Seed project tasks
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: stokt-notion/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: stokt-notion
+
+      - name: Run task seeding
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: npm run seed-project-tasks
+        working-directory: stokt-notion
