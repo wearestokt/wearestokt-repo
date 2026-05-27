@@ -1,63 +1,112 @@
-# Stream Bunny Hero (3D)
+# Stream Bunny Hero (Three.js)
 
-Interactive bunny head for the Stream Bunny landing page — cursor rotation (neck pivot), lens video reflection, left/right click to change clips.
+Interactive 3D bunny head: cursor rotation (neck pivot), lens videos, left/right click to swap clips.
 
-## Files
+**Workflow:** build and test in the browser → upload `dist/` to Bunny CDN → embed in Framer via iframe.
 
-| File | Purpose |
-|------|---------|
-| `StreamBunnyHero.tsx` | Framer code component |
-| `assets/STREAM-BUNNY-3D.glb` | Source model (reference copy; host on CDN for production) |
+## Quick start (browser)
 
-## GLB structure (do not rename in export)
+```bash
+cd Framer-Code/stream-bunny-hero
+npm install
+npm run dev
+```
+
+Open [http://localhost:5174](http://localhost:5174) — you should see the bunny from `https://stokt.b-cdn.net/STREAM-BUNNY-3D.glb`.
+
+Optional query params:
 
 ```text
-Group          ← rotation pivot (neck)
+http://localhost:5174/?v1=https://…/a.mp4&v2=https://…/b.mp4
+http://localhost:5174/embed.html?model=https://stokt.b-cdn.net/STREAM-BUNNY-3D.glb
+```
+
+## Build for CDN
+
+```bash
+npm run build
+```
+
+Upload the **entire** **`dist/`** folder to Bunny Storage (keep `embed.html` and `assets/` together), e.g.:
+
+```text
+https://stokt.b-cdn.net/stream-bunny-hero/embed.html
+https://stokt.b-cdn.net/stream-bunny-hero/assets/…
+```
+
+The GLB stays at `https://stokt.b-cdn.net/STREAM-BUNNY-3D.glb` (passed via `model` query param from Framer, or default in embed).
+
+Enable **CORS** on the pull zone if Framer’s domain loads the iframe from another host.
+
+## Framer
+
+1. Add **`StreamBunnyEmbed.tsx`** as a code component (not `StreamBunnyHero.tsx` unless you want the alias).
+2. Set **Embed URL** to your hosted `embed.html`.
+3. Set **Video 1–3** (MP4/WebM, CORS-enabled).
+4. Resize frame (800×800 or full-width hero).
+
+`StreamBunnyHero.tsx` re-exports `StreamBunnyEmbed` for backwards compatibility.
+
+## GLB structure
+
+```text
+Group          ← neck pivot; base rotation preserved, look offset applied via quaternion
 ├── Bunny
 └── Glass-Null
-    ├── Lens   ← video texture
+    ├── Lens   ← VideoTexture
     └── Frame
 ```
 
-## Setup in Framer
+## Source layout
 
-1. **Assets → Upload** `STREAM-BUNNY-3D.glb` to Framer, or upload to **Bunny Storage** and copy the public HTTPS URL.
-2. **Code →** create component from `StreamBunnyHero.tsx` (Framer will bundle `three` when you `import` it).
-3. Drop on canvas (recommended **800×800** or full-width hero with fixed height).
-4. In the property panel:
-   - **Model URL** — defaults to `https://stokt.b-cdn.net/STREAM-BUNNY-3D.glb` (override if you move the file)
-   - **Video 1–3** — MP4/WebM URLs for lens playback (must allow CORS if cross-origin)
-   - **Poster** — PNG for Framer canvas preview and loading state
-5. Publish.
+| Path | Role |
+|------|------|
+| `src/hero-scene.ts` | Three.js scene (shared by dev + embed) |
+| `src/main.ts` | Dev page entry |
+| `src/embed.ts` | Minimal iframe entry |
+| `index.html` | Dev UI |
+| `embed.html` | Production iframe page |
+| `StreamBunnyEmbed.tsx` | Framer iframe wrapper |
 
-You **do not** need to send the CDN link to anyone else — paste it only into **Model URL** in Framer.
+## Art direction (lighting, texture, camera)
 
-## Bunny CDN example
+### 1. Defaults in code
 
-After upload to a Bunny Storage zone:
+Edit **`src/art-direction.ts`** → `DEFAULT_ART` (camera, exposure, rim, head material, lens emissive).
 
-```text
-https://{pull-zone-hostname}/STREAM-BUNNY-3D.glb
+Set **`cameraFlip: true`** so the head faces the camera (C4D/glTF export points the mesh the wrong way for a default Three camera).
+
+### 2. Live dev panel
+
+```bash
+npm run dev
 ```
 
-Enable **CORS** on the storage zone if the lens videos are on a different hostname.
+Open **http://localhost:5174/?debug=1** — sliders update the scene and copy values into the URL.
 
-## Interaction
+### 3. URL params (embed / Framer iframe)
 
-- **Pointer move** — head rotates on `Group` (neck pivot), clamped by Max Yaw / Max Pitch.
-- **Click left 32% / right 32%** — previous / next video (when 2+ videos are set).
-- **Pause off screen** — stops rendering and video when scrolled away.
-- **`prefers-reduced-motion`** — head stays centered.
+| Param | Example | Effect |
+|-------|---------|--------|
+| `flip` | `1` | Face the camera |
+| `exposure` | `1.28` | Brightness |
+| `fov` | `30` | Camera FOV |
+| `dist` | `1.02` | Zoom |
+| `rim` | `FF4A1F` | Rim color (hex, no `#`) |
+| `head` | `0c0c0c` | Head color |
+| `rimL` / `rimR` / `rimT` | `5.5` | Rim light strength |
+| `glbMat` | `1` | Use C4D-exported materials only |
 
-## Tuning
+**Framer** (`StreamBunnyEmbed`): Background, Rim Light, Exposure, Face Camera.
 
-| Property | When to adjust |
-|----------|----------------|
-| Model Scale | Head too large/small in frame |
-| Max Yaw / Pitch | Rotation feels too strong (neck pivot amplifies motion) |
-| Follow Smooth | Snappier vs. floatier tracking |
-| Rim Light | Match brand orange `#FF4A1F` |
+### 4. C4D vs runtime
 
-## Local reference
+| In C4D / GLB | In Three.js (`art-direction.ts`) |
+|--------------|----------------------------------|
+| Shape, UVs, lens mesh | — |
+| Plastic color/roughness (optional) | `headColor`, `headRoughness`, or `glbMat=1` |
+| — | All lights, exposure, camera framing |
 
-The GLB in `assets/` is for version control and inspection. Framer and the published site load the **Model URL** you set in the panel, not this repo path.
+## Why iframe (not Three.js inside Framer)
+
+Framer’s code bundler often breaks `three` + `GLTFLoader` (size, `self`, duplicate instances). A static Vite build on your CDN is reliable and easy to debug in a normal browser tab.

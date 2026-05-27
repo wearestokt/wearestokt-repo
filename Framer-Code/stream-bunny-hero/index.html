@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stream Bunny Hero — Dev</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        color: #a3a3a3;
+        font-family: system-ui, sans-serif;
+      }
+      .wrap {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 16px;
+        gap: 12px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+      }
+      .hint {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      #hero-root {
+        flex: 1;
+        min-height: 360px;
+        border: 1px solid #1f1f1f;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      code {
+        color: #ff4a1f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Stream Bunny Hero</h1>
+      <p class="hint">
+        Move the cursor to rotate the head. Click left/right edges to change lens video
+        (when <code>v1</code>, <code>v2</code> are set).
+        Art direction: <code>?debug=1</code> or edit <code>src/art-direction.ts</code>.
+      </p>
+      <div id="hero-root"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
