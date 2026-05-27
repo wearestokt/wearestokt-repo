@@ -4,6 +4,8 @@ import { framer } from "framer-plugin"
 import { stripExtension } from "./filename"
 import type { StagedFile, UploadFailure } from "../types"
 
+const PERMISSION = "Collection.addItems" as const
+
 type UploadBatchParams = {
     collection: Collection
     files: StagedFile[]
@@ -24,6 +26,10 @@ export async function uploadBatch({
     const filesToProcess = files.filter(
         (file) => file.status === "valid" || (allowUnsupported && file.status === "unsupported")
     )
+
+    if (!framer.isAllowedTo(PERMISSION)) {
+        throw new Error("You don't have permission to add items to this collection.")
+    }
 
     const failures: UploadFailure[] = []
     let successCount = 0

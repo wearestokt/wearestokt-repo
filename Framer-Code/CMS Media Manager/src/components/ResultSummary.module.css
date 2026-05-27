@@ -44,5 +44,5 @@
 
 .failureError {
     font-size: 10px;
-    color: #ff6b6b;
+    color: var(--color-error);
 }

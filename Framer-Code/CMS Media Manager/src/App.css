@@ -1,3 +1,23 @@
+/* ── Semantic color tokens ──────────────────────────────────────────────── */
+/* Dark mode (default) */
+:root {
+    --color-error: #ff5c5c;
+    --color-error-bg: rgba(255, 92, 92, 0.08);
+    --color-warning: #f59e0b;
+    --color-warning-border: rgba(245, 158, 11, 0.25);
+    --color-success: #34d399;
+}
+
+/* Light mode overrides */
+[data-framer-theme="light"] {
+    --color-error: #dc2626;
+    --color-error-bg: rgba(220, 38, 38, 0.06);
+    --color-warning: #b45309;
+    --color-warning-border: rgba(180, 83, 9, 0.2);
+    --color-success: #059669;
+}
+/* ────────────────────────────────────────────────────────────────────────── */
+
 .app-main {
     position: relative;
     display: flex;

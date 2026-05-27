@@ -1,4 +1,4 @@
-import { framer } from "framer-plugin"
+import { framer, useIsAllowedTo } from "framer-plugin"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { CollectionPicker } from "./components/CollectionPicker"
@@ -113,6 +113,8 @@ export function App() {
         [stagedFiles]
     )
 
+    const canAddItems = useIsAllowedTo("Collection.addItems")
+
     const isBusy = phase === "uploading"
     const controlsDisabled = isBusy || collectionsLoading || fieldsLoading
 
@@ -121,6 +123,7 @@ export function App() {
         !!titleFieldId &&
         !!imageFieldId &&
         validFileCount > 0 &&
+        canAddItems &&
         !controlsDisabled
 
     function handleFilesSelected(fileList: FileList | File[]) {
@@ -264,6 +267,10 @@ export function App() {
                     {phase === "uploading" ? (
                         <StatusMessage>
                             Uploading {uploadProgress.current} of {uploadProgress.total}…
+                        </StatusMessage>
+                    ) : !canAddItems ? (
+                        <StatusMessage tone="error">
+                            You don't have permission to edit this collection.
                         </StatusMessage>
                     ) : null}
 

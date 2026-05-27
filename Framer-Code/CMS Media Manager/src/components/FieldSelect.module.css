@@ -25,9 +25,9 @@
 }
 
 .error {
-    color: #ff6b6b;
+    color: var(--color-error);
 }
 
 .success {
-    color: #2dca72;
+    color: var(--color-success);
 }
