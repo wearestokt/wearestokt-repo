@@ -9,6 +9,7 @@ type UploadBatchParams = {
     files: StagedFile[]
     titleFieldId: string
     imageFieldId: string
+    allowUnsupported: boolean
     onProgress: (current: number, total: number) => void
 }
 
@@ -17,33 +18,49 @@ export async function uploadBatch({
     files,
     titleFieldId,
     imageFieldId,
+    allowUnsupported,
     onProgress,
 }: UploadBatchParams): Promise<{ successCount: number; failures: UploadFailure[] }> {
-    const validFiles = files.filter((file): file is StagedFile & { file: File } => file.status === "valid" && !!file.file)
+    const filesToProcess = files.filter(
+        (file) => file.status === "valid" || (allowUnsupported && file.status === "unsupported")
+    )
+
     const failures: UploadFailure[] = []
     let successCount = 0
 
-    for (let index = 0; index < validFiles.length; index++) {
-        const stagedFile = validFiles[index]
-        const file = stagedFile.file
-        onProgress(index + 1, validFiles.length)
+    for (let index = 0; index < filesToProcess.length; index++) {
+        const stagedFile = filesToProcess[index]
+        onProgress(index + 1, filesToProcess.length)
 
         try {
-            const title = stripExtension(file.name)
-            const imageAsset = await framer.uploadImage({
-                image: file,
-                name: file.name,
-            })
+            const title = stripExtension(stagedFile.name)
 
-            await collection.addItems([
-                {
-                    slug: title,
-                    fieldData: {
-                        [titleFieldId]: { type: "string", value: title },
-                        [imageFieldId]: { type: "image", value: imageAsset.url },
+            if (stagedFile.status === "valid" && stagedFile.file) {
+                const imageAsset = await framer.uploadImage({
+                    image: stagedFile.file,
+                    name: stagedFile.file.name,
+                })
+
+                await collection.addItems([
+                    {
+                        slug: title,
+                        fieldData: {
+                            [titleFieldId]: { type: "string", value: title },
+                            [imageFieldId]: { type: "image", value: imageAsset.url },
+                        },
                     },
-                },
-            ])
+                ])
+            } else {
+                // Unsupported format — create item with title only, no image.
+                await collection.addItems([
+                    {
+                        slug: title,
+                        fieldData: {
+                            [titleFieldId]: { type: "string", value: title },
+                        },
+                    },
+                ])
+            }
 
             successCount++
         } catch (error) {

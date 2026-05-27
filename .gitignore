@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+**/.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+**/node_modules/
+
+# Build / cache
+**/dist/
+**/.next/
+.pnpm-store/
+*.log
+*.tsbuildinfo
+
+# Nested repos (tracked in their own GitHub repos)
+bunny-stream-official/
+
+# Large binary / generated output
+skyline-draw/
+**/*.zip
+ja-hypoteques/landing-page-main-extracted/
+
+# Scratch / temp files from MCP tooling
+stokt-notion/_*
+
+# IDE
+.cursor/
+.claude/

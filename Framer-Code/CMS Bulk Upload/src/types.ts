@@ -2,7 +2,7 @@ export type StagedFile = {
     id: string
     name: string
     file?: File
-    status: "valid" | "rejected"
+    status: "valid" | "rejected" | "unsupported"
     reason?: string
 }
 

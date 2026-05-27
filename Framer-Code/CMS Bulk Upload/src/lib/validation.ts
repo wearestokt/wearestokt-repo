@@ -17,17 +17,21 @@ function hasAcceptedExtension(filename: string): boolean {
     return false
 }
 
-export function validateImageFile(file: File): { valid: true } | { valid: false; reason: string } {
+export type ValidationResult =
+    | { valid: true }
+    | { valid: false; reason: string; rejectionType: "unsupported-format" | "too-large" }
+
+export function validateImageFile(file: File): ValidationResult {
     const mimeOk = ACCEPTED_MIME_TYPES.has(file.type)
     const extensionOk = hasAcceptedExtension(file.name)
 
     if (!mimeOk && !extensionOk) {
-        return { valid: false, reason: "Unsupported format" }
+        return { valid: false, reason: "Unsupported format", rejectionType: "unsupported-format" }
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
         const sizeMb = (file.size / (1024 * 1024)).toFixed(1)
-        return { valid: false, reason: `File too large (${sizeMb} MB)` }
+        return { valid: false, reason: `File too large (${sizeMb} MB)`, rejectionType: "too-large" }
     }
 
     return { valid: true }

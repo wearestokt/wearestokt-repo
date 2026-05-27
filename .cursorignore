@@ -1,0 +1,25 @@
+# Dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+**/.next/
+*.tsbuildinfo
+
+# Nested repos
+bunny-stream-official/
+
+# Large binary / generated output
+skyline-draw/
+**/*.zip
+ja-hypoteques/landing-page-main-extracted/
+
+# Scratch files
+stokt-notion/_*
+
+# Package manager caches
+.pnpm-store/
+**/.yarn/
+
+# Logs
+*.log

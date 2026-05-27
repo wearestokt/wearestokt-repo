@@ -5,6 +5,7 @@ import { DropZone } from "./components/DropZone"
 import { FieldSelect, StatusMessage } from "./components/FieldSelect"
 import { ResultSummary } from "./components/ResultSummary"
 import { StagedFileList } from "./components/StagedFileList"
+import { Tooltip } from "./components/Tooltip"
 import { useCollectionFields } from "./hooks/useCollectionFields"
 import { useCollections } from "./hooks/useCollections"
 import { validateImageFile } from "./lib/validation"
@@ -16,13 +17,21 @@ import "./App.css"
 framer.showUI({
     position: "top right",
     width: 320,
-    height: 520,
+    height: 560,
 })
 
 function createStagedFile(file: File): StagedFile {
     const validation = validateImageFile(file)
 
     if (!validation.valid) {
+        if (validation.rejectionType === "unsupported-format") {
+            return {
+                id: crypto.randomUUID(),
+                name: file.name,
+                status: "unsupported",
+                reason: validation.reason,
+            }
+        }
         return {
             id: crypto.randomUUID(),
             name: file.name,
@@ -55,6 +64,7 @@ export function App() {
     const [titleFieldId, setTitleFieldId] = useState("")
     const [imageFieldId, setImageFieldId] = useState("")
     const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([])
+    const [allowUnsupported, setAllowUnsupported] = useState(false)
     const [phase, setPhase] = useState<AppPhase>("configure")
     const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
     const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
@@ -65,7 +75,17 @@ export function App() {
     }, [selectedCollectionId])
 
     const validFileCount = useMemo(
-        () => stagedFiles.filter((file) => file.status === "valid").length,
+        () =>
+            stagedFiles.filter(
+                (file) =>
+                    file.status === "valid" ||
+                    (allowUnsupported && file.status === "unsupported")
+            ).length,
+        [stagedFiles, allowUnsupported]
+    )
+
+    const unsupportedCount = useMemo(
+        () => stagedFiles.filter((file) => file.status === "unsupported").length,
         [stagedFiles]
     )
 
@@ -107,6 +127,7 @@ export function App() {
             files: stagedFiles,
             titleFieldId,
             imageFieldId,
+            allowUnsupported,
             onProgress: (current, total) => setUploadProgress({ current, total }),
         })
 
@@ -177,7 +198,23 @@ export function App() {
                         files={stagedFiles}
                         onRemove={handleRemoveFile}
                         disabled={controlsDisabled}
+                        allowUnsupported={allowUnsupported}
                     />
+
+                    {unsupportedCount > 0 ? (
+                        <label className="app-checkbox-row">
+                            <input
+                                type="checkbox"
+                                checked={allowUnsupported}
+                                disabled={controlsDisabled}
+                                onChange={(event) => setAllowUnsupported(event.target.checked)}
+                            />
+                            <span className="app-checkbox-label">
+                                Create items for unsupported files
+                            </span>
+                            <Tooltip content="When enabled, files with unsupported formats (e.g. videos) still create a new CMS item with the filename as the title. The image field is left empty — useful for linking a video ID (e.g. from Bunny.net) later." />
+                        </label>
+                    ) : null}
 
                     {phase === "uploading" ? (
                         <StatusMessage>

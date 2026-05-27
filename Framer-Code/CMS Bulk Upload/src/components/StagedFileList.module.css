@@ -19,6 +19,10 @@
     background: var(--framer-color-bg-secondary);
 }
 
+.itemUnsupported {
+    border: 1px solid rgba(255, 170, 0, 0.25);
+}
+
 .meta {
     display: flex;
     flex-direction: column;
@@ -35,9 +39,14 @@
     white-space: nowrap;
 }
 
-.reason {
+.reasonError {
     font-size: 10px;
     color: #ff6b6b;
+}
+
+.reasonWarning {
+    font-size: 10px;
+    color: #ffaa00;
 }
 
 .remove {
