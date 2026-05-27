@@ -1,0 +1,8 @@
+{
+  "id": "eda05d",
+  "name": "CMS Bulk Upload",
+  "modes": [
+    "collection"
+  ],
+  "icon": "/icon.svg"
+}
