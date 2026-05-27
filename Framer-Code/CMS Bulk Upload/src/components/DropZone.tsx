@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from "react"
+import { useRef, useState, type DragEvent, type ReactNode } from "react"
 
 import styles from "./DropZone.module.css"
 
@@ -7,9 +7,19 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/gif"
 type DropZoneProps = {
     onFilesSelected: (files: FileList | File[]) => void
     disabled?: boolean
+    children?: ReactNode
 }
 
-export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
+const hiddenInputStyle: React.CSSProperties = {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    opacity: 0,
+    overflow: "hidden",
+    pointerEvents: "none",
+}
+
+export function DropZone({ onFilesSelected, disabled = false, children }: DropZoneProps) {
     const inputRef = useRef<HTMLInputElement>(null)
     const [isDragging, setIsDragging] = useState(false)
 
@@ -36,38 +46,41 @@ export function DropZone({ onFilesSelected, disabled = false }: DropZoneProps) {
     }
 
     return (
-        <div
-            className={`${styles.dropZone} ${isDragging ? styles.dragging : ""} ${disabled ? styles.disabled : ""}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => {
-                if (!disabled) inputRef.current?.click()
-            }}
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            onKeyDown={(event) => {
-                if (disabled) return
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault()
-                    inputRef.current?.click()
-                }
-            }}
-        >
+        <>
             <input
                 ref={inputRef}
                 type="file"
                 accept={ACCEPT}
                 multiple
-                className={styles.input}
+                style={hiddenInputStyle}
                 disabled={disabled}
+                tabIndex={-1}
+                aria-hidden
                 onChange={(event) => {
                     handleFiles(event.target.files)
                     event.target.value = ""
                 }}
             />
-            <span className={styles.title}>Drop images here</span>
-            <span className={styles.subtitle}>JPEG, PNG, WebP, GIF · Max 10 MB</span>
-        </div>
+            <div
+                className={`${styles.dropZone} ${isDragging ? styles.dragging : ""} ${disabled ? styles.disabled : ""}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => {
+                    if (!disabled) inputRef.current?.click()
+                }}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                onKeyDown={(event) => {
+                    if (disabled) return
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        inputRef.current?.click()
+                    }
+                }}
+            >
+                {children}
+            </div>
+        </>
     )
 }

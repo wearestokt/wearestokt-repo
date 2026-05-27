@@ -1,30 +1,90 @@
 .app-main {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 12px;
     width: 100%;
     height: 100%;
-    padding: 12px;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
-.app-header {
+/* Horizontal divider between sections */
+.app-divider {
+    width: 100%;
+    height: 1px;
+    margin-top: 10px;
+    background: var(--framer-color-divider);
+    flex-shrink: 0;
+}
+
+/* Field selectors — 2-column grid */
+.app-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px 15px;
+    flex-shrink: 0;
+}
+
+/* Empty state — square drop zone with width fill */
+.app-empty-state {
+    display: flex;
+    padding: 15px;
+    flex-shrink: 0;
+}
+
+.app-empty-inner {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 24px 20px;
+    text-align: center;
 }
 
-.app-title {
+.app-empty-icon {
+    color: var(--framer-color-text-tertiary);
+    margin-bottom: 4px;
+}
+
+.app-empty-title {
     font-size: 13px;
     font-weight: 600;
     color: var(--framer-color-text);
 }
 
-.app-subtitle {
+.app-empty-sub {
     font-size: 11px;
-    color: var(--framer-color-text-secondary);
+    color: var(--framer-color-text-tertiary);
+    line-height: 1.5;
+    max-width: 200px;
 }
 
+/* Staged files / result section */
+.app-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 15px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Action row: Add more + Upload */
+.app-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.app-actions .framer-button-secondary,
+.app-actions .framer-button-primary {
+    flex: 1;
+}
+
+/* Checkbox row for unsupported files option */
 .app-checkbox-row {
     display: flex;
     align-items: center;
@@ -33,9 +93,9 @@
 }
 
 .app-checkbox-label {
+    flex: 1;
     font-size: 11px;
     font-weight: 500;
     color: var(--framer-color-text);
-    flex: 1;
     user-select: none;
 }

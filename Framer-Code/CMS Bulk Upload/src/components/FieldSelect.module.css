@@ -1,18 +1,21 @@
 .field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    width: 100%;
+    gap: 5px;
+    min-width: 0;
 }
 
 .label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    color: var(--framer-color-text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--framer-color-text-tertiary);
 }
 
 .select {
     width: 100%;
+    font-size: 12px;
 }
 
 .message {

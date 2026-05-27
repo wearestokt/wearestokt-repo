@@ -1,6 +1,7 @@
 import { framer } from "framer-plugin"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
+import { CollectionPicker } from "./components/CollectionPicker"
 import { DropZone } from "./components/DropZone"
 import { FieldSelect, StatusMessage } from "./components/FieldSelect"
 import { ResultSummary } from "./components/ResultSummary"
@@ -16,8 +17,8 @@ import "./App.css"
 
 framer.showUI({
     position: "top right",
-    width: 320,
-    height: 560,
+    width: 300,
+    height: 460,
 })
 
 function createStagedFile(file: File): StagedFile {
@@ -48,7 +49,30 @@ function createStagedFile(file: File): StagedFile {
     }
 }
 
+function UploadCloudIcon() {
+    return (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <path
+                d="M10.667 21.333S6 21.333 6 16.667c0-3.734 2.933-6.4 6.667-6.4.266 0 .533 0 .8.027C14.4 7.893 17.067 6 20 6c4 0 6.667 2.933 6.667 6.667 0 .266 0 .533-.027.8C28.4 14.267 30 16 30 18c0 2.4-2 3.333-4 3.333"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M20 24l-4-4-4 4M16 20v10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    )
+}
+
 export function App() {
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
     const {
         collections,
         selectedCollection,
@@ -135,65 +159,86 @@ export function App() {
         setPhase("complete")
     }
 
+    const hasFiles = stagedFiles.length > 0
+    const isComplete = phase === "complete" && uploadResult !== null
+
     return (
         <main className="app-main">
-            <header className="app-header">
-                <h1 className="app-title">CMS Bulk Upload</h1>
-                <p className="app-subtitle">Upload images as new CMS items.</p>
-            </header>
-
-            {collectionsError ? <StatusMessage tone="error">{collectionsError}</StatusMessage> : null}
-            {fieldsError ? <StatusMessage tone="error">{fieldsError}</StatusMessage> : null}
-
-            {collectionsLoading ? (
-                <StatusMessage>Loading collections…</StatusMessage>
-            ) : collections.length === 0 ? (
-                <StatusMessage>No writable CMS collections found.</StatusMessage>
+            {/* Collection picker row */}
+            {collectionsError ? (
+                <div className="app-section">
+                    <StatusMessage tone="error">{collectionsError}</StatusMessage>
+                </div>
             ) : (
-                <FieldSelect
-                    label="Collection"
+                <CollectionPicker
+                    collections={collections}
                     value={selectedCollectionId}
-                    options={collections.map((collection) => ({
-                        id: collection.id,
-                        name: collection.name,
-                    }))}
                     onChange={setSelectedCollectionId}
-                    disabled={controlsDisabled || phase === "complete"}
-                    placeholder="Select collection"
+                    disabled={controlsDisabled || isComplete}
+                    loading={collectionsLoading}
                 />
             )}
 
-            {selectedCollection ? (
-                <>
-                    <FieldSelect
-                        label="Title field"
-                        value={titleFieldId}
-                        options={stringFields.map((field) => ({ id: field.id, name: field.name }))}
-                        onChange={setTitleFieldId}
-                        disabled={controlsDisabled || phase === "complete"}
-                        placeholder="Select string field"
-                    />
+            <div className="app-divider" />
 
-                    <FieldSelect
-                        label="Image field"
-                        value={imageFieldId}
-                        options={imageFields.map((field) => ({ id: field.id, name: field.name }))}
-                        onChange={setImageFieldId}
-                        disabled={controlsDisabled || phase === "complete"}
-                        placeholder="Select image field"
-                    />
+            {/* Field selectors — compact 2-col, only when collection is selected */}
+            {selectedCollection && !isComplete ? (
+                <>
+                    <div className="app-fields">
+                        {fieldsError ? (
+                            <StatusMessage tone="error">{fieldsError}</StatusMessage>
+                        ) : (
+                            <>
+                                <FieldSelect
+                                    label="Title field"
+                                    value={titleFieldId}
+                                    options={stringFields.map((f) => ({ id: f.id, name: f.name }))}
+                                    onChange={setTitleFieldId}
+                                    disabled={controlsDisabled}
+                                    placeholder="Select…"
+                                />
+                                <FieldSelect
+                                    label="Image field"
+                                    value={imageFieldId}
+                                    options={imageFields.map((f) => ({ id: f.id, name: f.name }))}
+                                    onChange={setImageFieldId}
+                                    disabled={controlsDisabled}
+                                    placeholder="Select…"
+                                />
+                            </>
+                        )}
+                    </div>
+                    <div className="app-divider" />
                 </>
             ) : null}
 
-            {phase === "complete" && uploadResult ? (
-                <ResultSummary
-                    successCount={uploadResult.successCount}
-                    failures={uploadResult.failures}
-                    onReset={handleReset}
-                />
+            {/* Body */}
+            {isComplete ? (
+                <div className="app-section">
+                    <ResultSummary
+                        successCount={uploadResult.successCount}
+                        failures={uploadResult.failures}
+                        onReset={handleReset}
+                    />
+                </div>
+            ) : !hasFiles ? (
+                /* Empty state */
+                <div className="app-empty-state">
+                    <DropZone onFilesSelected={handleFilesSelected} disabled={controlsDisabled}>
+                        <div className="app-empty-inner">
+                            <span className="app-empty-icon">
+                                <UploadCloudIcon />
+                            </span>
+                            <span className="app-empty-title">Drop images here</span>
+                            <span className="app-empty-sub">
+                                or click to browse · JPEG, PNG, WebP, GIF · 10 MB max
+                            </span>
+                        </div>
+                    </DropZone>
+                </div>
             ) : (
-                <>
-                    <DropZone onFilesSelected={handleFilesSelected} disabled={controlsDisabled} />
+                /* Staged files */
+                <div className="app-section">
                     <StagedFileList
                         files={stagedFiles}
                         onRemove={handleRemoveFile}
@@ -212,7 +257,7 @@ export function App() {
                             <span className="app-checkbox-label">
                                 Create items for unsupported files
                             </span>
-                            <Tooltip content="When enabled, files with unsupported formats (e.g. videos) still create a new CMS item with the filename as the title. The image field is left empty — useful for linking a video ID (e.g. from Bunny.net) later." />
+                            <Tooltip content="When enabled, files with unsupported formats (e.g. videos) still create a new CMS item with the filename as the title. The image field is left empty — useful for linking a Bunny.net video ID later." />
                         </label>
                     ) : null}
 
@@ -222,15 +267,42 @@ export function App() {
                         </StatusMessage>
                     ) : null}
 
-                    <button
-                        type="button"
-                        className="framer-button-primary"
-                        disabled={!canUpload}
-                        onClick={() => void handleUpload()}
-                    >
-                        Upload
-                    </button>
-                </>
+                    <div className="app-actions">
+                        <button
+                            type="button"
+                            className="framer-button-secondary"
+                            disabled={controlsDisabled}
+                            onClick={() => {
+                                if (!controlsDisabled) fileInputRef.current?.click()
+                            }}
+                        >
+                            Add more
+                        </button>
+                        <button
+                            type="button"
+                            className="framer-button-primary"
+                            disabled={!canUpload}
+                            onClick={() => void handleUpload()}
+                        >
+                            Upload {validFileCount > 0 ? `${validFileCount} file${validFileCount === 1 ? "" : "s"}` : ""}
+                        </button>
+                    </div>
+
+                    {/* Hidden file input for "Add more" — must be zero-size, not display:none */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        multiple
+                        style={{ position: "absolute", width: 0, height: 0, opacity: 0, overflow: "hidden", pointerEvents: "none" }}
+                        tabIndex={-1}
+                        aria-hidden
+                        onChange={(event) => {
+                            if (event.target.files) handleFilesSelected(event.target.files)
+                            event.target.value = ""
+                        }}
+                    />
+                </div>
             )}
         </main>
     )

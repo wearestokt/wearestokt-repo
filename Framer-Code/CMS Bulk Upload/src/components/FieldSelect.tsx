@@ -33,7 +33,7 @@ export function FieldSelect({
                 disabled={disabled || options.length === 0}
                 onChange={(event) => onChange(event.target.value)}
             >
-                <option value="">{options.length === 0 ? "No fields available" : placeholder}</option>
+                <option value="">{options.length === 0 ? "No fields" : placeholder}</option>
                 {options.map((option) => (
                     <option key={option.id} value={option.id}>
                         {option.name}
