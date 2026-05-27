@@ -1,0 +1,2156 @@
+[
+  {
+    "clickupViewId": "8chr3pa-6431",
+    "clickupViewName": "New Brand Identity - Questionnaire",
+    "clickupPublicUrl": "https://forms.clickup.com/9011203786/f/8chr3pa-6431/CPKTG2I8PXLHWJ5HW4",
+    "listName": "New Brand Questionnaire (EN)",
+    "name": "New Brand Identity - Questionnaire",
+    "description": "Migrated from ClickUp list: New Brand Questionnaire (EN)",
+    "fields": [
+      {
+        "name": "1.4 What stage is the project at?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "7d11cfe2-1eb7-477d-95fc-109340bf7f29",
+              "name": "Idea",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "47c2be46-fa0e-4081-8049-603334f3b190",
+              "name": "MVP",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "db724b58-60b1-49de-b284-b65641534924",
+              "name": "Pre-Launch",
+              "color": "#800000",
+              "orderindex": 2
+            },
+            {
+              "id": "ca6e0980-80c5-4c13-9182-b41e2dec2e99",
+              "name": "Launching",
+              "color": "#EA80FC",
+              "orderindex": 3
+            },
+            {
+              "id": "be668544-4299-4917-b139-60619b0ebd23",
+              "name": "Early Growth",
+              "color": "#AF7E2E",
+              "orderindex": 4
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.4 Who is your primary audience?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.2 What motivated you to start this company or product?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.3 In an ideal world, where do you want this brand to be in 1–2 years?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.1 Who is this brand for?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.2 What problem does this brand solve for them?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.3 What alternatives or competitors already exist in this space?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.1 What should make this brand different or noticeable?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.2 What do you want people to understand immediately when they encounter the brand?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.1 List 3–5 adjectives that should describe the brand",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.2 List 3–5 adjectives that should NOT describe the brand",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.3 How should the brand feel overall?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.1 Are there brands or visuals you are inspired by? Why?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.2 Any visual styles, clichés, or directions you want to avoid?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.3 Are there any constraints we should respect from day one?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.1 Who will be involved in feedback during the project?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.2 Who gives final approval?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.3 Preferred communication channel",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "8.1 Is there anything important we should know before starting the brand work?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "8.2 Existing materials (optional)",
+        "type": "attachment",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Company Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "In one sentence, what does your company do?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Website",
+        "type": "url",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Website / Product",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "What triggered this brand project at this moment?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      }
+    ]
+  },
+  {
+    "clickupViewId": "8chr3pa-6451",
+    "clickupViewName": "Nouvelle Identité de Marque - Questionnaire",
+    "clickupPublicUrl": "https://forms.clickup.com/9011203786/f/8chr3pa-6451/8HYFLX4IMYABBIQZIL",
+    "listName": "New Brand Questionnaire (FR)",
+    "name": "Nouvelle Identité de Marque - Questionnaire",
+    "description": "Migrated from ClickUp list: New Brand Questionnaire (FR)",
+    "fields": [
+      {
+        "name": "1.4 À quel stade en est le projet ?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "8380d9d7-d522-46e8-84cd-56c44bf112b9",
+              "name": "Idée",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "8663836d-9d8a-49ee-a228-94bb91dd470e",
+              "name": "Minimum Viable Product (MVP)",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "01671130-0842-471a-9929-38646877420e",
+              "name": "Pré-lancement",
+              "color": "#FF7FAB",
+              "orderindex": 2
+            },
+            {
+              "id": "7d111a8e-279c-4434-8ef7-bbab29de1612",
+              "name": "Lancement",
+              "color": "#81B1FF",
+              "orderindex": 3
+            },
+            {
+              "id": "8e5bfbc0-cd65-40ca-89b3-ae043d7997c6",
+              "name": "Début de croissance",
+              "color": "#ff7800",
+              "orderindex": 4
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.4 What stage is the project at?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "7d11cfe2-1eb7-477d-95fc-109340bf7f29",
+              "name": "Idea",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "47c2be46-fa0e-4081-8049-603334f3b190",
+              "name": "MVP",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "db724b58-60b1-49de-b284-b65641534924",
+              "name": "Pre-Launch",
+              "color": "#800000",
+              "orderindex": 2
+            },
+            {
+              "id": "ca6e0980-80c5-4c13-9182-b41e2dec2e99",
+              "name": "Launching",
+              "color": "#EA80FC",
+              "orderindex": 3
+            },
+            {
+              "id": "be668544-4299-4917-b139-60619b0ebd23",
+              "name": "Early Growth",
+              "color": "#AF7E2E",
+              "orderindex": 4
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.4 Who is your primary audience?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.2 What motivated you to start this company or product?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.3 In an ideal world, where do you want this brand to be in 1–2 years?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.1 Who is this brand for?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.2 What problem does this brand solve for them?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.3 What alternatives or competitors already exist in this space?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.1 What should make this brand different or noticeable?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.2 What do you want people to understand immediately when they encounter the brand?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.1 List 3–5 adjectives that should describe the brand",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.2 List 3–5 adjectives that should NOT describe the brand",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.3 How should the brand feel overall?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.1 Are there brands or visuals you are inspired by? Why?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.2 Any visual styles, clichés, or directions you want to avoid?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.3 Are there any constraints we should respect from day one?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.1 Who will be involved in feedback during the project?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.2 Who gives final approval?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.3 Preferred communication channel",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "8.1 Is there anything important we should know before starting the brand work?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "8.2 Existing materials (optional)",
+        "type": "attachment",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Company Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "In one sentence, what does your company do?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Website",
+        "type": "url",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Website / Product",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "What triggered this brand project at this moment?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      }
+    ]
+  },
+  {
+    "clickupViewId": "8chr3pa-7551",
+    "clickupViewName": "Website Design & Development - Questionnaire (copy)",
+    "clickupPublicUrl": "https://forms.clickup.com/9011203786/f/8chr3pa-7551/O0A8GELRPAD0HKC4S4",
+    "listName": "Website Design & Development (EN)",
+    "name": "Website Design & Development - Questionnaire (copy)",
+    "description": "Migrated from ClickUp list: Website Design & Development (EN)",
+    "fields": [
+      {
+        "name": "1.1 Please specify",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.1 What is the primary goal of this website?",
+        "type": "labels",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "138c94bf-4a32-4b9c-8cee-009306b6396b",
+              "label": "Generate leads or inquiries",
+              "color": "#AF7E2E",
+              "orderindex": 0
+            },
+            {
+              "id": "00e9acf9-63d9-4f4d-97b3-b653ec61f899",
+              "label": "Sell a product or service",
+              "color": "#ff7800",
+              "orderindex": 1
+            },
+            {
+              "id": "656fc89b-512b-4228-b721-da0369fb0224",
+              "label": "Present the company and build credibility",
+              "color": "#e50000",
+              "orderindex": 2
+            },
+            {
+              "id": "54a28b6b-f2fe-4844-8961-6d1d9904d1ab",
+              "label": "Support an existing sales process",
+              "color": "#FF7FAB",
+              "orderindex": 3
+            },
+            {
+              "id": "b994b923-2139-41a5-b860-70d87ef1095b",
+              "label": "Hire or attract talent",
+              "color": "#FF4081",
+              "orderindex": 4
+            },
+            {
+              "id": "91c4a45c-1192-43d4-beb4-1bcef7f0341b",
+              "label": "Other (please specify)",
+              "color": "#02BCD4",
+              "orderindex": 5
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.2 Are there secondary goals for this website?",
+        "type": "labels",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "ed618e43-c46b-497e-a5fb-0483d5ba71d3",
+              "label": "Educate users",
+              "color": "#EA80FC",
+              "orderindex": 0
+            },
+            {
+              "id": "7589e520-2376-4c2a-b6a8-c574c33ab63d",
+              "label": "Showcase past work or case studies",
+              "color": "#800000",
+              "orderindex": 1
+            },
+            {
+              "id": "d549e7ad-16a1-409e-a60a-9a91b942ca9a",
+              "label": "Answer common questions",
+              "color": "#b5bcc2",
+              "orderindex": 2
+            },
+            {
+              "id": "793a992f-d84d-4af5-9337-6aa1dc16f766",
+              "label": "Build trust or legitimacy",
+              "color": "#3397dd",
+              "orderindex": 3
+            },
+            {
+              "id": "b349851f-38ae-4027-ba74-9f470563826e",
+              "label": "Drive traffic to another platform",
+              "color": "#0231E8",
+              "orderindex": 4
+            },
+            {
+              "id": "d38cd568-4f43-47d4-9b34-7365de4a1d68",
+              "label": "Other (Please Specify)",
+              "color": "#AF7E2E",
+              "orderindex": 5
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.2 Please specify",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.3 How will you personally consider this website a success?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.4 Is there a specific action you want visitors to take on the website?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.5 Are there any metrics or results you care about today?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.6 Is there anything this website is not meant to do?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.1 Who is this website primarily for?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.2 Are there different types of users visiting the website?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "cddf8489-498b-4695-85f8-8c823f549400",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "018e727c-d577-40f1-9ca7-85ea36ea593e",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "7a42dbd2-c08a-41ac-8565-2083f9ea33b9",
+              "name": "I don't know",
+              "color": "#E65100",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "2.3 If yes, what are the main user types?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.4 What is the main problem or question visitors are trying to solve when they land on the site?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.5 What should visitors understand within the first few seconds?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.6 Do you have website references you like?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.6 What is the ideal journey for a visitor on your website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.7 Are there competitors or comparable businesses we should be aware of?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.7 Are there specific pages or information some users should see before taking action?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.8 Are there any user behaviors or patterns you already observe?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.1 What pages do you currently have in mind for the website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.3 Do you need to migrate pages or content from a previous website?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "e32b3c49-829b-41fe-a571-5f2207c9fba9",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "6807fb86-6c77-40f4-b17b-a8c4568caff0",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "cf7e92e8-c5e1-44ab-a003-9a9e8ce2972a",
+              "name": "Not Sure",
+              "color": "#E65100",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "3.4 If yes, which pages or content need to be kept or recreated?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.5 Do you need the website in more than one language?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "bc8f4332-ee20-4e0c-80be-3268c8a67e86",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "5ed4dddd-7b95-4218-87e8-ccc5c858845d",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "d8fe6007-7a3e-4dca-ba92-8eacde81c6a9",
+              "name": "Not sure",
+              "color": "#02BCD4",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "3.6 If yes, which languages are required?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.7 Are there legal or mandatory pages required for your business?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.8 Is there content that must be easily accessible from anywhere on the site?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.1 Do you already have content written for the website?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "bb0859db-7e7b-4900-88aa-9078c10a37f7",
+              "name": "Yes, most of it",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "39180fbf-46dd-474c-a9fc-8247cdcab065",
+              "name": "Yes, partially",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "c1cd4765-08ac-4260-80d2-2909d9eb1351",
+              "name": "No, content needs to be created",
+              "color": "#ff7800",
+              "orderindex": 2
+            },
+            {
+              "id": "5c6a5be8-08d5-4ce2-aecf-13db07b9a380",
+              "name": "Not sure",
+              "color": "#3082B7",
+              "orderindex": 3
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "4.2 If you have existing content, where is it currently stored?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.3 Who will be responsible for providing or approving content?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.4 Are there visual assets you would like to use on the website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.4 Do you already have brand guidelines or a defined visual identity?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "b88e9f42-b0ba-4434-932d-cb6728e085db",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "ce134429-193b-4b28-bb09-b32897b2f9dc",
+              "name": "Partially",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "da7c01b1-8123-47a6-954f-a87cb7ee38b0",
+              "name": "No",
+              "color": "#800000",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "4.5 If yes or partially, please share your brand guidelines and available brand assets",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.5 If yes or partially, please share your brand guidelines and available brand assets",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.5 Upload any files you would like to share",
+        "type": "attachment",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.6 Are there assets or content you already know will need to be created?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.6 Upload any brand-related files",
+        "type": "attachment",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.7 Are there constraints or limitations related to content or assets?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.1 Are there specific features or functionalities the website needs?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.2 Will the website require a CMS for managing repeatable content?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "742cfab2-7a3d-4aaf-a495-9e612c160ae5",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "03813347-4faf-48d3-a3f5-e550eb00466d",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "08640405-39c9-4a53-8bfc-f02965883e7e",
+              "name": "Not Sure",
+              "color": "#7C4DFF",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "5.3 Do you already have a domain and hosting set up?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "c64efffc-ce55-4d14-b724-bb6aea270d29",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "71bddc77-326a-406c-9075-9ffb09b7c0f3",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "5d4488ba-8bfb-48a8-84f0-6b3152edd5a0",
+              "name": "Not sure",
+              "color": "#f900ea",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "5.3 If yes, what type of content do you expect to manage through the CMS?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.4 If yes, where is your domain currently managed?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.5 Are there performance, accessibility, or compliance requirements we should be aware of?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.6 Are there internal technical constraints or approvals we need to consider?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.7 Is there anything technical that worries you about this project?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.9 Do you have SEO considerations or expectations for this website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.1 Are there any known constraints that could impact the project timeline?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.3 Are there other stakeholders involved in reviewing or approving the work?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.4 How quickly can feedback typically be provided?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "0503f1e3-2e1d-4900-a4f3-17bcdbcc5f0a",
+              "name": "Same day",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "9e98439e-c61a-4cd9-8d15-35f4e9ff7c9a",
+              "name": "Within 1–2 business days",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "154cb414-fd5f-4d31-8959-1672fc8b515b",
+              "name": "Within 3–5 business days",
+              "color": "#9b59b6",
+              "orderindex": 2
+            },
+            {
+              "id": "dbbcb3b3-259f-43a8-a7d4-7a23b67677de",
+              "name": "Not sure",
+              "color": "#e50000",
+              "orderindex": 3
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "6.5 Are there upcoming periods where feedback or approvals may be delayed?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.1 Is there anything else you’d like to share or clarify before we start?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.2 Have you reviewed your responses and confirmed they reflect your expectations for this project?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "dfda08e7-d6f1-4d50-a7b0-929698a50ed3",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "d753f842-6a86-4b2d-9e4c-62c35b2c577b",
+              "name": "Not sure",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "Are there specific sections you want to prioritize on key pages, especially the landing page?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Billing adress",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Billing Email",
+        "type": "email",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Business Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Contact Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Contact Role",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "For example: internal approvals, limited availability, vacation periods, dependencies on third parti",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Legal Business Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Please Specify",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Primary Contact",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Primary Contact Email",
+        "type": "email",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Will the website need to connect to external tools or platforms?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "You said: I'm using click up to manage my schedule. I need to build an orboarding + Working with cl",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      }
+    ]
+  },
+  {
+    "clickupViewId": "8chr3pa-7531",
+    "clickupViewName": "Questionnaire - Design & Développment du Site Web",
+    "clickupPublicUrl": "https://forms.clickup.com/9011203786/f/8chr3pa-7531/W4XP93UN01VGD6DKJ6",
+    "listName": "Website Design & Development (FR",
+    "name": "Questionnaire - Design & Développment du Site Web",
+    "description": "Migrated from ClickUp list: Website Design & Development (FR",
+    "fields": [
+      {
+        "name": "1.1 Please specify",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.1 Quel est l’objectif principal de ce site web ?",
+        "type": "labels",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "b73263bb-04c8-4d7a-bf67-81c49d333596",
+              "label": "Générer des prospects ou des demandes",
+              "color": "#800000",
+              "orderindex": 0
+            },
+            {
+              "id": "618e7262-492c-4dea-8ec2-99c6c041497f",
+              "label": "Vendre un produit ou un service",
+              "color": "#6647f0",
+              "orderindex": 1
+            },
+            {
+              "id": "7d9ad143-e09f-43f4-82e4-e1c082ce3853",
+              "label": "Présenter l’entreprise et renforcer la crédibilité",
+              "color": "#12a594",
+              "orderindex": 2
+            },
+            {
+              "id": "57a083b8-7c1e-4313-8742-b94ef8a45901",
+              "label": "Soutenir un processus de vente existant",
+              "color": "#ab4aba",
+              "orderindex": 3
+            },
+            {
+              "id": "441a1b44-03c2-47b7-84b6-82745de9281d",
+              "label": "Recruter ou attirer des talents",
+              "color": "#ffc53d",
+              "orderindex": 4
+            },
+            {
+              "id": "00402037-d704-45c1-a325-dd32110a9118",
+              "label": "Autre (veuillez préciser)",
+              "color": "#a18072",
+              "orderindex": 5
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.1 Veuillez préciser",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.1 What is the primary goal of this website?",
+        "type": "labels",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "138c94bf-4a32-4b9c-8cee-009306b6396b",
+              "label": "Generate leads or inquiries",
+              "color": "#AF7E2E",
+              "orderindex": 0
+            },
+            {
+              "id": "00e9acf9-63d9-4f4d-97b3-b653ec61f899",
+              "label": "Sell a product or service",
+              "color": "#ff7800",
+              "orderindex": 1
+            },
+            {
+              "id": "656fc89b-512b-4228-b721-da0369fb0224",
+              "label": "Present the company and build credibility",
+              "color": "#e50000",
+              "orderindex": 2
+            },
+            {
+              "id": "54a28b6b-f2fe-4844-8961-6d1d9904d1ab",
+              "label": "Support an existing sales process",
+              "color": "#FF7FAB",
+              "orderindex": 3
+            },
+            {
+              "id": "b994b923-2139-41a5-b860-70d87ef1095b",
+              "label": "Hire or attract talent",
+              "color": "#FF4081",
+              "orderindex": 4
+            },
+            {
+              "id": "91c4a45c-1192-43d4-beb4-1bcef7f0341b",
+              "label": "Other (please specify)",
+              "color": "#02BCD4",
+              "orderindex": 5
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.2 Are there secondary goals for this website?",
+        "type": "labels",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "ed618e43-c46b-497e-a5fb-0483d5ba71d3",
+              "label": "Educate users",
+              "color": "#EA80FC",
+              "orderindex": 0
+            },
+            {
+              "id": "7589e520-2376-4c2a-b6a8-c574c33ab63d",
+              "label": "Showcase past work or case studies",
+              "color": "#800000",
+              "orderindex": 1
+            },
+            {
+              "id": "d549e7ad-16a1-409e-a60a-9a91b942ca9a",
+              "label": "Answer common questions",
+              "color": "#b5bcc2",
+              "orderindex": 2
+            },
+            {
+              "id": "793a992f-d84d-4af5-9337-6aa1dc16f766",
+              "label": "Build trust or legitimacy",
+              "color": "#3397dd",
+              "orderindex": 3
+            },
+            {
+              "id": "b349851f-38ae-4027-ba74-9f470563826e",
+              "label": "Drive traffic to another platform",
+              "color": "#0231E8",
+              "orderindex": 4
+            },
+            {
+              "id": "d38cd568-4f43-47d4-9b34-7365de4a1d68",
+              "label": "Other (Please Specify)",
+              "color": "#AF7E2E",
+              "orderindex": 5
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.2 Please specify",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.2 Veuillez préciser",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.2 Y a-t-il des objectifs secondaires pour ce site web ?*",
+        "type": "labels",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "345bf961-80f8-41ac-97b4-6e625676e12d",
+              "label": "Éduquer les utilisateurs",
+              "color": "#E65100",
+              "orderindex": 0
+            },
+            {
+              "id": "d7d7af7c-1c57-4f0c-89ef-8578c1e5e000",
+              "label": "Présenter des réalisations passées ou des études de cas",
+              "color": "#ffc53d",
+              "orderindex": 1
+            },
+            {
+              "id": "1f17bb25-e0f9-4887-a2fe-4e985fbea42e",
+              "label": "Répondre aux questions courantes",
+              "color": "#30a46c",
+              "orderindex": 2
+            },
+            {
+              "id": "17ad1e5f-0612-499d-bc55-314f594aab92",
+              "label": "Renforcer la confiance ou la légitimité",
+              "color": "#3e63dd",
+              "orderindex": 3
+            },
+            {
+              "id": "65339a17-ce2d-4363-b20d-89635c5a7056",
+              "label": "Diriger le trafic vers une autre plateforme",
+              "color": "#e93d82",
+              "orderindex": 4
+            },
+            {
+              "id": "c8fb1a84-cec3-4e08-8fa1-9e2034c30c1a",
+              "label": "Autre (veuillez préciser)",
+              "color": "#a18072",
+              "orderindex": 5
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "1.3 How will you personally consider this website a success?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.4 Is there a specific action you want visitors to take on the website?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.5 Are there any metrics or results you care about today?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "1.6 Is there anything this website is not meant to do?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.1 Who is this website primarily for?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.2 Are there different types of users visiting the website?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "cddf8489-498b-4695-85f8-8c823f549400",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "018e727c-d577-40f1-9ca7-85ea36ea593e",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "7a42dbd2-c08a-41ac-8565-2083f9ea33b9",
+              "name": "I don't know",
+              "color": "#E65100",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "2.3 If yes, what are the main user types?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.4 What is the main problem or question visitors are trying to solve when they land on the site?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.5 What should visitors understand within the first few seconds?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.6 Do you have website references you like?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.6 What is the ideal journey for a visitor on your website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.7 Are there competitors or comparable businesses we should be aware of?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.7 Are there specific pages or information some users should see before taking action?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2.8 Are there any user behaviors or patterns you already observe?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.1 What pages do you currently have in mind for the website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.3 Do you need to migrate pages or content from a previous website?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "e32b3c49-829b-41fe-a571-5f2207c9fba9",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "6807fb86-6c77-40f4-b17b-a8c4568caff0",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "cf7e92e8-c5e1-44ab-a003-9a9e8ce2972a",
+              "name": "Not Sure",
+              "color": "#E65100",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "3.3 Faut-il migrer des pages ou du contenu d’un site précédent ?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "86608e34-e6dd-4e88-b0d6-f7d4e5f6e72c",
+              "name": "Oui",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "2e80a11c-02ad-4bf7-9391-82149685d6da",
+              "name": "Non",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "8e4f2035-8278-4275-9c7d-fa800135c6a8",
+              "name": "Pas certain",
+              "color": "#f900ea",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "3.4 If yes, which pages or content need to be kept or recreated?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.4 Si oui, quel contenu doit être conservé, adapté ou retiré ?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.5 Avez-vous besoin du site en plusieurs langues ?*",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "24abbee3-c1b1-4143-9522-682f0ba2f4f0",
+              "name": "Oui",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "9babd5ad-14bb-49fb-b171-4fdd424672bd",
+              "name": "Non",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "3.5 Do you need the website in more than one language?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "bc8f4332-ee20-4e0c-80be-3268c8a67e86",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "5ed4dddd-7b95-4218-87e8-ccc5c858845d",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "d8fe6007-7a3e-4dca-ba92-8eacde81c6a9",
+              "name": "Not sure",
+              "color": "#02BCD4",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "3.6 If yes, which languages are required?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.6 Si oui, quelles langues sont requises ?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.7 Are there legal or mandatory pages required for your business?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3.8 Is there content that must be easily accessible from anywhere on the site?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.1 Avez-vous déjà du contenu rédigé pour le site? Si oui, nous indiquer l'emplacement",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.1 Do you already have content written for the website?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "bb0859db-7e7b-4900-88aa-9078c10a37f7",
+              "name": "Yes, most of it",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "39180fbf-46dd-474c-a9fc-8247cdcab065",
+              "name": "Yes, partially",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "c1cd4765-08ac-4260-80d2-2909d9eb1351",
+              "name": "No, content needs to be created",
+              "color": "#ff7800",
+              "orderindex": 2
+            },
+            {
+              "id": "5c6a5be8-08d5-4ce2-aecf-13db07b9a380",
+              "name": "Not sure",
+              "color": "#3082B7",
+              "orderindex": 3
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "4.2 If you have existing content, where is it currently stored?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.3 Who will be responsible for providing or approving content?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.4 Are there visual assets you would like to use on the website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.4 Avez-vous déjà des directives de marque ou une identité visuelle définie ?*",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "2101137c-2104-4e4c-b18d-9465267c7e76",
+              "name": "Oui",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "c6361af8-b36d-4554-b453-3fbc7c337886",
+              "name": "Non",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "c8e4e2a9-5214-496d-8743-6facd900e087",
+              "name": "Partiellement",
+              "color": "#E65100",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "4.4 Do you already have brand guidelines or a defined visual identity?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "b88e9f42-b0ba-4434-932d-cb6728e085db",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "ce134429-193b-4b28-bb09-b32897b2f9dc",
+              "name": "Partially",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "da7c01b1-8123-47a6-954f-a87cb7ee38b0",
+              "name": "No",
+              "color": "#800000",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "4.5 If yes or partially, please share your brand guidelines and available brand assets",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.5 If yes or partially, please share your brand guidelines and available brand assets",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.5 Upload any files you would like to share",
+        "type": "attachment",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.6 Are there assets or content you already know will need to be created?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.6 Upload any brand-related files",
+        "type": "attachment",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4.7 Are there constraints or limitations related to content or assets?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.1 Are there specific features or functionalities the website needs?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.2 Le site nécessitera-t-il un CMS pour gérer du contenu récurrent ?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "201dac45-5273-4878-923d-065432759661",
+              "name": "Oui",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "36ca573c-a88d-4270-980d-eb095d4809cf",
+              "name": "Non",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "3a415e37-c9bb-4234-8a68-259c43a07523",
+              "name": "Pas certain",
+              "color": "#AF7E2E",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "5.2 Will the website require a CMS for managing repeatable content?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "742cfab2-7a3d-4aaf-a495-9e612c160ae5",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "03813347-4faf-48d3-a3f5-e550eb00466d",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "08640405-39c9-4a53-8bfc-f02965883e7e",
+              "name": "Not Sure",
+              "color": "#7C4DFF",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "5.3 Do you already have a domain and hosting set up?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "c64efffc-ce55-4d14-b724-bb6aea270d29",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "71bddc77-326a-406c-9075-9ffb09b7c0f3",
+              "name": "No",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "5d4488ba-8bfb-48a8-84f0-6b3152edd5a0",
+              "name": "Not sure",
+              "color": "#f900ea",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "5.3 If yes, what type of content do you expect to manage through the CMS?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.4 If yes, where is your domain currently managed?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.4 Si oui, où votre nom de domaine est-il actuellement géré ?",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.5 Are there performance, accessibility, or compliance requirements we should be aware of?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.5 Avez-vous déjà un nom de domaine et un hébergement ?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "c0e4aad9-e123-45ab-b751-016c75ffc4f2",
+              "name": "Oui",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "47eedee7-9dd4-4bc1-8279-5ec54ed81ad6",
+              "name": "Non",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "ad5ea7f6-f739-423c-a623-43d99072d5f5",
+              "name": "Pas certain",
+              "color": "#e50000",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "5.6 Are there internal technical constraints or approvals we need to consider?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.7 Is there anything technical that worries you about this project?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5.9 Do you have SEO considerations or expectations for this website?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.1 Are there any known constraints that could impact the project timeline?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.3 Are there other stakeholders involved in reviewing or approving the work?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6.4 En combien de temps les retours peuvent-ils généralement être fournis ?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "33b9444c-a43f-4bce-bce8-9db496a222b8",
+              "name": "Jour même",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "c24558b3-bd28-4467-918a-53f05686d95a",
+              "name": "1 à 2 jours ouvrables",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "2e82e6b0-e45b-4777-9a52-9f84f3f54e1b",
+              "name": "3 à 5 jours ouvrables",
+              "color": null,
+              "orderindex": 2
+            },
+            {
+              "id": "c3871dda-e883-48db-9381-d83d9cbcd47e",
+              "name": "Pas certain",
+              "color": null,
+              "orderindex": 3
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "6.4 How quickly can feedback typically be provided?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "0503f1e3-2e1d-4900-a4f3-17bcdbcc5f0a",
+              "name": "Same day",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "9e98439e-c61a-4cd9-8d15-35f4e9ff7c9a",
+              "name": "Within 1–2 business days",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "154cb414-fd5f-4d31-8959-1672fc8b515b",
+              "name": "Within 3–5 business days",
+              "color": "#9b59b6",
+              "orderindex": 2
+            },
+            {
+              "id": "dbbcb3b3-259f-43a8-a7d4-7a23b67677de",
+              "name": "Not sure",
+              "color": "#e50000",
+              "orderindex": 3
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "6.5 Are there upcoming periods where feedback or approvals may be delayed?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.1 Is there anything else you’d like to share or clarify before we start?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7.2 Avez-vous relu vos réponses et confirmé qu’elles reflètent vos attentes pour ce projet ?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "70cda895-b493-487a-8515-35a56de31d28",
+              "name": "Oui",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "183122a6-9e20-4a0d-ac3b-24910901b9dd",
+              "name": "Non",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            },
+            {
+              "id": "15951244-fa87-4e7c-b5e2-dc05d7bcc181",
+              "name": "Pas certain",
+              "color": "#667684",
+              "orderindex": 2
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "7.2 Have you reviewed your responses and confirmed they reflect your expectations for this project?",
+        "type": "drop_down",
+        "type_config": {
+          "sorting": "manual",
+          "options": [
+            {
+              "id": "dfda08e7-d6f1-4d50-a7b0-929698a50ed3",
+              "name": "Yes",
+              "color": "#FF4081",
+              "orderindex": 0
+            },
+            {
+              "id": "d753f842-6a86-4b2d-9e4c-62c35b2c577b",
+              "name": "Not sure",
+              "color": "#7C4DFF",
+              "orderindex": 1
+            }
+          ]
+        },
+        "required": false
+      },
+      {
+        "name": "Are there specific sections you want to prioritize on key pages, especially the landing page?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "For example: internal approvals, limited availability, vacation periods, dependencies on third parti",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Please Specify",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Will the website need to connect to external tools or platforms?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "You said: I'm using click up to manage my schedule. I need to build an orboarding + Working with cl",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      }
+    ]
+  },
+  {
+    "clickupViewId": "8chr3pa-8951",
+    "clickupViewName": "Form",
+    "clickupPublicUrl": "https://forms.clickup.com/9011203786/f/8chr3pa-8951/SVQSGB6G3MAP2T84QR",
+    "listName": "Strategy Copy (EN)",
+    "name": "Form",
+    "description": "Migrated from ClickUp list: Strategy Copy (EN)",
+    "fields": [
+      {
+        "name": "1. How would you describe your company today to someone outside your industry?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "2. Looking at recent work, which projects felt like a natural fit for you, and which felt like a str",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "3. Where do your strongest and most profitable projects typically come from?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "4. If you had to narrow your focus to one type of client or market segment for the next 2–3 years, w",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "5. When your ideal client is considering hiring a studio like yours, what are they most worried abou",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "6. What mistakes have clients made before working with you?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "7. What makes a client feel confident choosing you over another studio?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "8. Before working with you, what does your client’s situation usually feel like? After working with",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "9. If a competitor copied your website tomorrow, what couldn’t they realistically replicate?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "10. In three years, what do you want to be known for?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "11. If your company were a person walking into a room, how would they behave?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "12. What kind of tone would feel wrong or off-brand for you?",
+        "type": "text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Company Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      },
+      {
+        "name": "Contact Name",
+        "type": "short_text",
+        "type_config": {},
+        "required": false
+      }
+    ]
+  }
+]

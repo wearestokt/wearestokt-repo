@@ -1,0 +1,9 @@
+{
+  "name": "svh-override",
+  "private": true,
+  "devDependencies": {
+    "@types/react": "^18",
+    "react": "^18",
+    "typescript": "^5"
+  }
+}

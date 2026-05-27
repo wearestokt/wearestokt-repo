@@ -1,0 +1,10 @@
+{
+  "name": "bvp-webgl",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . -p 3333",
+    "start": "npx serve . -p 3333",
+    "serve": "python3 -m http.server 3333"
+  }
+}

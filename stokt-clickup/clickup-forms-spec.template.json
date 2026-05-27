@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Example Form Name",
+    "description": "Optional description",
+    "fields": [
+      { "name": "Full Name", "type": "short_text", "type_config": {}, "required": true },
+      { "name": "Email", "type": "email", "type_config": {}, "required": true },
+      { "name": "Message", "type": "long_text", "type_config": {}, "required": false },
+      {
+        "name": "Stage",
+        "type": "drop_down",
+        "type_config": {
+          "options": [
+            { "name": "Idea" },
+            { "name": "MVP" },
+            { "name": "Launching" }
+          ]
+        },
+        "required": false
+      }
+    ]
+  }
+]
