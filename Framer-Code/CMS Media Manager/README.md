@@ -1,4 +1,4 @@
-# CMS Bulk Upload
+# CMS Media Manager
 
 Framer plugin for bulk-uploading images into a CMS collection via drag and drop. Each file becomes a new CMS item with the filename (without extension) as the title and slug.
 
