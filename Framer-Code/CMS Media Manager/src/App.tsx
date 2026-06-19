@@ -149,17 +149,23 @@ export function App() {
         setUploadResult(null)
         setUploadProgress({ current: 0, total: validFileCount })
 
-        const result = await uploadBatch({
-            collection: selectedCollection,
-            files: stagedFiles,
-            titleFieldId,
-            imageFieldId,
-            allowUnsupported,
-            onProgress: (current, total) => setUploadProgress({ current, total }),
-        })
-
-        setUploadResult(result)
-        setPhase("complete")
+        try {
+            const result = await uploadBatch({
+                collection: selectedCollection,
+                files: stagedFiles,
+                titleFieldId,
+                imageFieldId,
+                allowUnsupported,
+                onProgress: (current, total) => setUploadProgress({ current, total }),
+            })
+            setUploadResult(result)
+            setPhase("complete")
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : "Upload failed. Please try again."
+            framer.notify(message, { variant: "error" })
+            setPhase("configure")
+        }
     }
 
     const hasFiles = stagedFiles.length > 0
