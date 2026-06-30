@@ -356,14 +356,321 @@ export const appTransferMode: ToolcraftTransferMode = {
 };
 
 export const appProductReadiness: ToolcraftProductReadiness = {
-  mode: "starter",
-  reason:
-    "Neutral Toolcraft template before a product schema, renderer, and acceptance matrix are authored.",
+  mode: "product",
+  productName: "Flow Field",
+  productSummary:
+    "Art-directable vector-field graphic generator that renders directional markers over a procedural flow field and exports still PNG/JPG output.",
+  requestedBehavior:
+    "Create flowy current-flow graphics that resemble scientific ocean-current data but are far more art-directable, for graphic creation.",
 };
 
-export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [];
+function controlAcceptance(
+  partial: Omit<ToolcraftComponentAcceptance, "automated" | "browser" | "evidence" | "kind"> &
+    Partial<Pick<ToolcraftComponentAcceptance, "evidence" | "kind">>,
+): ToolcraftComponentAcceptance {
+  return {
+    automated: true,
+    browser: true,
+    evidence: "product-output",
+    kind: "control",
+    ...partial,
+  };
+}
 
-export const starterControlSectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = [];
+export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
+  controlAcceptance({
+    automatedTestName: "flow pattern changes product output",
+    browserTestName: "browser: flow pattern changes product output",
+    componentType: "select",
+    expectedObservable: "Choosing a different flow pattern changes the rendered field geometry.",
+    fixture: "default flow field",
+    id: "flow.pattern",
+    optionCoverage: "each-visible-item",
+    target: "flow.pattern",
+    userAction: "Open the Pattern select and choose Vortex.",
+  }),
+  controlAcceptance({
+    automatedTestName: "flow direction changes product output",
+    browserTestName: "browser: flow direction changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Direction rotates the marker field.",
+    fixture: "default flow field",
+    id: "flow.direction",
+    target: "flow.direction",
+    userAction: "Drag the Direction slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "flow frequency changes product output",
+    browserTestName: "browser: flow frequency changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Frequency rescales the flow feature size.",
+    fixture: "default flow field",
+    id: "flow.frequency",
+    target: "flow.frequency",
+    userAction: "Drag the Frequency slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "flow swirl changes product output",
+    browserTestName: "browser: flow swirl changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Swirl adds rotational bias to the field.",
+    fixture: "default flow field",
+    id: "flow.swirl",
+    target: "flow.swirl",
+    userAction: "Drag the Swirl slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "flow turbulence changes product output",
+    browserTestName: "browser: flow turbulence changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Turbulence distorts the field direction.",
+    fixture: "default flow field",
+    id: "flow.turbulence",
+    target: "flow.turbulence",
+    userAction: "Drag the Turbulence slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "guides edit mode enables canvas overlay",
+    browserTestName: "browser: guides edit mode enables canvas overlay",
+    componentType: "switch",
+    expectedObservable: "Enabling Edit guides shows the spline overlay for direct manipulation.",
+    fixture: "default flow field",
+    id: "guides.editMode",
+    target: "guides.editMode",
+    userAction: "Toggle Edit guides on.",
+  }),
+  controlAcceptance({
+    automatedTestName: "guides influence changes product output",
+    browserTestName: "browser: guides influence changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Influence changes how strongly markers follow guide splines.",
+    fixture: "flow field with guide path",
+    id: "guides.influence",
+    target: "guides.influence",
+    userAction: "Drag the Influence slider with a guide path present.",
+  }),
+  controlAcceptance({
+    automatedTestName: "guides reach changes product output",
+    browserTestName: "browser: guides reach changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Reach changes how far guide bending extends.",
+    fixture: "flow field with guide path",
+    id: "guides.reach",
+    target: "guides.reach",
+    userAction: "Drag the Reach slider with a guide path present.",
+  }),
+  controlAcceptance({
+    automatedTestName: "guides linear mask changes product output",
+    browserTestName: "browser: guides linear mask changes product output",
+    componentType: "switch",
+    expectedObservable:
+      "Enabling Linear only hides markers outside guide reach for path-following output.",
+    fixture: "flow field with guide path",
+    id: "guides.maskUninfluenced",
+    target: "guides.maskUninfluenced",
+    userAction: "Toggle Linear only with a guide path present.",
+  }),
+  controlAcceptance({
+    actionCoverage: ["add-path"],
+    automatedTestName: "add guide path creates editable spline",
+    browserTestName: "browser: add guide path creates editable spline",
+    componentType: "actions",
+    expectedObservable: "Clicking Add path creates a new active guide for canvas editing.",
+    fixture: "default flow field",
+    id: "guides.addPath",
+    target: "guides.addPath",
+    userAction: "Click Add path.",
+  }),
+  controlAcceptance({
+    actionCoverage: ["delete-path"],
+    automatedTestName: "delete guide path removes active spline",
+    browserTestName: "browser: delete guide path removes active spline",
+    componentType: "actions",
+    expectedObservable: "Clicking Delete path removes the active guide from the field.",
+    fixture: "flow field with guide path",
+    id: "guides.deletePath",
+    target: "guides.deletePath",
+    userAction: "Click Delete path.",
+  }),
+  controlAcceptance({
+    automatedTestName: "field density changes product output",
+    browserTestName: "browser: field density changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Density changes how many markers fill the grid.",
+    fixture: "default flow field",
+    id: "field.density",
+    target: "field.density",
+    userAction: "Drag the Density slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "field jitter changes product output",
+    browserTestName: "browser: field jitter changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Jitter offsets markers from their grid cells.",
+    fixture: "default flow field",
+    id: "field.jitter",
+    target: "field.jitter",
+    userAction: "Drag the Jitter slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "marker style changes product output",
+    browserTestName: "browser: marker style changes product output",
+    componentType: "select",
+    expectedObservable: "Choosing a different marker style changes the glyph shape.",
+    fixture: "default flow field",
+    id: "marker.style",
+    optionCoverage: "each-visible-item",
+    target: "marker.style",
+    userAction: "Open the Style select and choose Arrow.",
+  }),
+  controlAcceptance({
+    automatedTestName: "marker length changes product output",
+    browserTestName: "browser: marker length changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Length resizes the markers.",
+    fixture: "default flow field",
+    id: "marker.length",
+    target: "marker.length",
+    userAction: "Drag the Length slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "marker thickness changes product output",
+    browserTestName: "browser: marker thickness changes product output",
+    componentType: "slider",
+    expectedObservable: "Dragging Thickness changes the marker stroke weight.",
+    fixture: "default flow field",
+    id: "marker.thickness",
+    target: "marker.thickness",
+    userAction: "Drag the Thickness slider.",
+  }),
+  controlAcceptance({
+    automatedTestName: "marker color changes product output",
+    browserTestName: "browser: marker color changes product output",
+    componentType: "colorOpacity",
+    controlPartCoverage: ["colorOpacity.hex", "colorOpacity.opacity"],
+    expectedObservable:
+      "Editing the marker color hex and opacity changes the rendered marker fill.",
+    fixture: "default flow field",
+    id: "marker.color",
+    target: "marker.color",
+    userAction: "Open the marker Color control and change its hex and opacity.",
+  }),
+  controlAcceptance({
+    automatedTestName: "include background changes product output",
+    browserTestName: "browser: include background changes product output",
+    componentType: "switch",
+    expectedObservable:
+      "Disabling Include makes the PNG image export transparent (alpha), hides the live preview product background while the canvas shell stays visible, and video output would still keep the product background.",
+    fixture: "default flow field",
+    id: "export.includeBackground",
+    target: "export.includeBackground",
+    userAction: "Toggle the Include switch off.",
+  }),
+  controlAcceptance({
+    automatedTestName: "background color changes product output",
+    browserTestName: "browser: background color changes product output",
+    componentType: "color",
+    expectedObservable: "Changing the background color repaints the product background fill.",
+    fixture: "default flow field",
+    id: "appearance.background",
+    target: "appearance.background",
+    userAction: "Open the background color control and pick a new color.",
+  }),
+  controlAcceptance({
+    automatedTestName: "image export format selects encoding",
+    browserTestName: "browser: image export format selects encoding",
+    componentType: "select",
+    evidence: "exported-bytes",
+    expectedObservable: "Choosing JPG vs PNG vs SVG changes the exported file type and bytes.",
+    fixture: "default flow field",
+    id: "export.image.format",
+    optionCoverage: "each-visible-item",
+    target: "export.image.format",
+    userAction: "Open the Format select and choose JPG, then export.",
+  }),
+  controlAcceptance({
+    automatedTestName: "image export resolution sizes output",
+    browserTestName: "browser: image export resolution sizes output",
+    componentType: "select",
+    evidence: "exported-bytes",
+    expectedObservable:
+      "Choosing 2K/4K/8K changes the exported PNG long-edge pixel dimensions.",
+    fixture: "default flow field",
+    id: "export.image.resolution",
+    optionCoverage: "each-visible-item",
+    target: "export.image.resolution",
+    userAction: "Open the Resolution select and choose 8K, then export.",
+  }),
+  controlAcceptance({
+    actionCoverage: ["export-png", "copy-png"],
+    automatedTestName: "export and copy actions deliver product output",
+    browserTestName: "browser: export and copy actions deliver product output",
+    componentType: "panelActions",
+    evidence: "exported-bytes",
+    expectedObservable:
+      "Export PNG downloads a sized image of the field and Copy PNG writes it to the clipboard.",
+    fixture: "default flow field",
+    id: "panel.actions",
+    target: "panel.actions",
+    userAction: "Click Export PNG and Copy PNG.",
+  }),
+];
+
+export const starterControlSectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = [
+  {
+    entity: "Flow field equation",
+    groupingReason:
+      "These controls all shape the underlying vector field that every marker samples.",
+    targets: ["flow.pattern", "flow.direction", "flow.frequency", "flow.swirl", "flow.turbulence"],
+    title: "Flow Field",
+    workflowStage: "Define the field",
+  },
+  {
+    entity: "Spline guide paths",
+    groupingReason:
+      "Guide edit mode, reach, influence, and linear mask shape how splines bend the field; path actions manage the guide list.",
+    targets: [
+      "guides.editMode",
+      "guides.maskUninfluenced",
+      "guides.influence",
+      "guides.reach",
+      "guides.addPath",
+      "guides.deletePath",
+    ],
+    title: "Flow Guides",
+    workflowStage: "Direct the flow along splines",
+  },
+  {
+    entity: "Marker grid layout",
+    groupingReason:
+      "Density and jitter control where markers are placed on the grid, not how the field flows.",
+    targets: ["field.density", "field.jitter"],
+    title: "Field Grid",
+    workflowStage: "Place the markers",
+  },
+  {
+    entity: "Marker glyph appearance",
+    groupingReason: "These controls style the individual marker glyph shape, size, and color.",
+    targets: ["marker.style", "marker.length", "marker.thickness", "marker.color"],
+    title: "Marker Style",
+    workflowStage: "Style the markers",
+  },
+  {
+    entity: "Product background",
+    groupingReason:
+      "The required background section pairs the include toggle with the background color for export and preview.",
+    targets: ["export.includeBackground", "appearance.background"],
+    title: "Background",
+    workflowStage: "Set the background",
+  },
+  {
+    entity: "Image export settings",
+    groupingReason: "Format and resolution are the compact export-encoding workflow pair.",
+    targets: ["export.image.format", "export.image.resolution"],
+    title: "Image Export",
+    workflowStage: "Export the image",
+  },
+];
 
 function getActionValue(action: ToolcraftActionSchema | string): string {
   return typeof action === "string" ? action : action.value;
@@ -3056,7 +3363,7 @@ export function validateToolcraftAcceptanceCoverage(
   schema: ResolvedToolcraftAppSchema = appSchema,
   acceptance: readonly ToolcraftComponentAcceptance[] = appAcceptance,
   transferMode: ToolcraftTransferMode = appTransferMode,
-  sectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = starterControlSectionInventory,
+  sectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = [],
 ): string[] {
   const errors: string[] = [];
   const controls = collectToolcraftVisibleControls(schema);

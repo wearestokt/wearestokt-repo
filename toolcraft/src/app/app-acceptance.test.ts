@@ -1773,7 +1773,6 @@ describe("Toolcraft template app acceptance coverage", () => {
 
     expect(
       validateToolcraftAcceptanceCoverage(intrinsicUploadSchema, [
-        ...appAcceptance,
         {
           automated: true,
           automatedTestName: "media viewer uses uploaded natural dimensions",
@@ -3136,7 +3135,29 @@ describe("Toolcraft template app acceptance coverage", () => {
   });
 
   it("publishes control order targets for app schema tests", () => {
-    expect(getToolcraftControlOrderTargets(appSchema)).toEqual([]);
+    expect(getToolcraftControlOrderTargets(appSchema)).toEqual([
+      "flow.pattern",
+      "flow.direction",
+      "flow.frequency",
+      "flow.swirl",
+      "flow.turbulence",
+      "guides.editMode",
+      "guides.maskUninfluenced",
+      "guides.influence",
+      "guides.reach",
+      "guides.addPath",
+      "guides.deletePath",
+      "field.density",
+      "field.jitter",
+      "marker.style",
+      "marker.length",
+      "marker.thickness",
+      "marker.color",
+      "export.includeBackground",
+      "appearance.background",
+      "export.image.format",
+      "export.image.resolution",
+    ]);
   });
 
   it("defaults generated apps to new Toolcraft assembly mode", () => {
