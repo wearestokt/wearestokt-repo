@@ -3136,23 +3136,35 @@ describe("Toolcraft template app acceptance coverage", () => {
 
   it("publishes control order targets for app schema tests", () => {
     expect(getToolcraftControlOrderTargets(appSchema)).toEqual([
+      "paths.editMode",
+      "paths.reach",
+      "paths.strength",
+      "paths.addPath",
+      "paths.deletePath",
+      "flow.texturePreset",
       "flow.pattern",
       "flow.direction",
       "flow.frequency",
       "flow.swirl",
       "flow.turbulence",
-      "guides.editMode",
-      "guides.maskUninfluenced",
-      "guides.influence",
-      "guides.reach",
-      "guides.addPath",
-      "guides.deletePath",
-      "field.density",
-      "field.jitter",
-      "marker.style",
-      "marker.length",
-      "marker.thickness",
-      "marker.color",
+      "flow.seed",
+      "flow.randomizeSeed",
+      "streams.density",
+      "streams.lengthMin",
+      "streams.lengthMax",
+      "streams.lengthContrast",
+      "streams.smoothness",
+      "stroke.style",
+      "stroke.width",
+      "stroke.widthBySpeed",
+      "stroke.taper",
+      "stroke.headSize",
+      "color.mode",
+      "color.flat",
+      "color.stop1",
+      "color.stop2",
+      "color.stop3",
+      "color.mapBy",
       "export.includeBackground",
       "appearance.background",
       "export.image.format",
@@ -4288,8 +4300,8 @@ describe("Toolcraft template app acceptance coverage", () => {
     ).toEqual(expect.arrayContaining(["png", "jpg"]));
     expect(
       imageFormatControl?.defaultValue,
-      'Image format must default to "png".',
-    ).toBe("png");
+      'Image format must default to "svg".',
+    ).toBe("svg");
     expect(
       imageResolutionControl,
       'The separate "Image Export" section must include a resolution control with target "export.image.resolution".',
@@ -4304,8 +4316,8 @@ describe("Toolcraft template app acceptance coverage", () => {
     ).toEqual(expect.arrayContaining(["2k", "4k", "8k"]));
     expect(
       imageResolutionControl?.defaultValue,
-      'Image resolution must default to "4k".',
-    ).toBe("4k");
+      'Image resolution must default to "2k".',
+    ).toBe("2k");
     expect(
       imageExportHasInlinePair,
       "Image Export format and resolution must render as a compact inline pair.",

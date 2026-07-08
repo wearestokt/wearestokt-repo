@@ -9,10 +9,10 @@ test("browser: flow field app opens as a Toolcraft shell with product controls",
   await expect(page.getByRole("application", { name: "Canvas viewport" })).toBeVisible();
   await expect(page.locator("[data-toolcraft-flow-canvas]")).toBeVisible();
 
-  // Product controls panel is present alongside the mandatory runtime Setup.
-  await expect(page.getByText("Flow Field", { exact: true })).toBeVisible();
-  await expect(page.getByText("Marker Style", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
+  await expect(page.getByText("Flow Paths", { exact: true })).toBeVisible();
+  await expect(page.getByText("Streams", { exact: true })).toBeVisible();
+  await expect(page.getByText("Stroke", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export SVG" })).toBeVisible();
 });
 
 test("browser: flow field canvas renders product output without app UI text", async ({

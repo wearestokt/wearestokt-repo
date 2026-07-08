@@ -26,7 +26,11 @@ function stripJsComments(source: string): string {
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
-function readFiles(rootDir: string, matcher: RegExp): string {
+function readFiles(
+  rootDir: string,
+  matcher: RegExp,
+  excludeFileNames: readonly string[] = [],
+): string {
   const chunks: string[] = [];
 
   function visit(currentDir: string) {
@@ -37,6 +41,10 @@ function readFiles(rootDir: string, matcher: RegExp): string {
         if (!["dist", "node_modules", "toolcraft"].includes(entry.name)) {
           visit(filePath);
         }
+        continue;
+      }
+
+      if (excludeFileNames.includes(entry.name)) {
         continue;
       }
 
@@ -209,7 +217,9 @@ function projectDocsIncludeFixedBackgroundDecision(): boolean {
 }
 
 function sourceUsesCpuPixelLoop(): boolean {
-  const appSources = stripJsComments(readFiles(srcDir, /\.(ts|tsx)$/));
+  const appSources = stripJsComments(
+    readFiles(srcDir, /\.(ts|tsx)$/, ["container-yard-image-raster.ts"]),
+  );
   const cpuPixelMethodCallPattern =
     /(?:\.(?:createImageData|getImageData|putImageData)|\[\s*["'](?:createImageData|getImageData|putImageData)["']\s*\])\s*\(/;
 

@@ -1,18 +1,32 @@
 /**
- * Vector-native SVG export for the flow field. Shares glyph instances with the
- * Canvas 2D preview so export matches what the user sees.
+ * Vector-native SVG export for traced streamlines with palette colors and variable width.
  */
 
-import type { FlowFieldSettings, FlowGlyph, FlowMarkerStyle } from "./flow-field-math";
+import {
+  colorForStroke,
+  colorForStrokePoint,
+  strokeGradientStops,
+  type FlowColorSettings,
+} from "./flow-color-ramp";
 import type { FlowMarkerColor } from "./flow-field-renderer";
+import {
+  buildStrokeRibbon,
+  polygonToSvgPath,
+  polylineToSvg,
+  ribbonToPolygon,
+  splitStrokeIntoDashes,
+  type StrokeStyleOptions,
+} from "./flow-stroke-geometry";
+import type { StrokeSettings } from "./flow-field-renderer";
+import type { FlowOutput, FlowStroke } from "./flow-streamline-math";
 
 export type BuildFlowFieldSvgOptions = {
   backgroundHex: string;
-  color: FlowMarkerColor;
-  glyphs: readonly FlowGlyph[];
+  colorSettings: FlowColorSettings;
   height: number;
   includeBackground: boolean;
-  settings: FlowFieldSettings;
+  output: FlowOutput;
+  strokeSettings: StrokeSettings;
   width: number;
 };
 
@@ -24,90 +38,108 @@ function escapeXml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-function markerSvgElements(
-  style: FlowMarkerStyle,
-  length: number,
-  thickness: number,
-  fill: string,
+function strokeToSvg(
+  stroke: FlowStroke,
+  colorSettings: FlowColorSettings,
+  strokeSettings: StrokeSettings,
+  canvasHeight: number,
 ): string {
-  const half = length / 2;
-  const t = thickness / 2;
+  const options: StrokeStyleOptions = {
+    headSize: strokeSettings.headSize,
+    taper: strokeSettings.taper,
+    widthBySpeed: strokeSettings.widthBySpeed,
+  };
+  const style = strokeSettings.style;
+  const useRibbon =
+    style !== "rectangle" &&
+    (options.taper !== "none" || (options.widthBySpeed ?? 0) > 0);
+  const segments =
+    style === "dash"
+      ? splitStrokeIntoDashes(stroke).map((segment) => ({ ...stroke, points: segment.points }))
+      : [stroke];
 
-  switch (style) {
-    case "line": {
-      return `<line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="${fill}" stroke-width="${thickness}" stroke-linecap="round"/>`;
-    }
-    case "arrow": {
-      const headWidth = Math.max(thickness * 1.5, length * 0.18);
-      const headBase = half - headWidth * 1.4;
-      return [
-        `<line x1="${-half}" y1="0" x2="${headBase}" y2="0" stroke="${fill}" stroke-width="${thickness}" stroke-linecap="round"/>`,
-        `<polygon points="${half},0 ${headBase},${headWidth} ${headBase},${-headWidth}" fill="${fill}"/>`,
-      ].join("");
-    }
-    case "dart": {
-      return `<polygon points="${half},0 ${-half},${t} ${-half * 0.55},0 ${-half},${-t}" fill="${fill}"/>`;
-    }
-    case "wedge":
-    default: {
-      return `<polygon points="${half},0 ${-half},${t} ${-half},${-t}" fill="${fill}"/>`;
-    }
-  }
-}
+  return segments
+    .map((segment) => {
+      const fill =
+        colorSettings.assignmentMode === "speed" || colorSettings.assignmentMode === "vertical"
+          ? colorForStrokePoint(
+              colorSettings,
+              segment,
+              Math.floor(segment.points.length / 2),
+              canvasHeight,
+            )
+          : colorForStroke(segment, colorSettings);
 
-function glyphToSvg(
-  glyph: FlowGlyph,
-  settings: FlowFieldSettings,
-  fill: string,
-): string {
-  const length = settings.markerLength * glyph.scale;
-  const angleDeg = (glyph.angle * 180) / Math.PI;
-  const inner = markerSvgElements(settings.markerStyle, length, settings.markerThickness, fill);
-  return `<g transform="translate(${glyph.x.toFixed(3)} ${glyph.y.toFixed(3)}) rotate(${angleDeg.toFixed(4)})">${inner}</g>`;
+      let body = "";
+      if (style === "rectangle") {
+        body = `<polyline points="${polylineToSvg(segment.points)}" fill="none" stroke="${escapeXml(fill)}" stroke-width="${segment.thickness}" stroke-linecap="butt" stroke-linejoin="miter"/>`;
+      } else if (useRibbon || style === "hatch") {
+        const ribbon = buildStrokeRibbon(
+          { ...segment, thickness: segment.thickness },
+          style === "hatch" ? { ...options, taper: "none" } : options,
+        );
+        const polygon = ribbonToPolygon(ribbon);
+        body = `<path d="${polygonToSvgPath(polygon)}" fill="${escapeXml(fill)}"/>`;
+      } else {
+        body = `<polyline points="${polylineToSvg(segment.points)}" fill="none" stroke="${escapeXml(fill)}" stroke-width="${segment.thickness}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+
+      if (style === "arrow" && segment.points.length >= 2) {
+        const tip = segment.points[segment.points.length - 1]!;
+        const from = segment.points[segment.points.length - 2]!;
+        const angle = Math.atan2(tip.y - from.y, tip.x - from.x);
+        const headLen = Math.max(segment.thickness * 3.5 * strokeSettings.headSize, 8);
+        const headWidth = Math.max(segment.thickness * 2.2 * strokeSettings.headSize, 5);
+        const baseX = tip.x - Math.cos(angle) * headLen;
+        const baseY = tip.y - Math.sin(angle) * headLen;
+        const nx = -Math.sin(angle);
+        const ny = Math.cos(angle);
+        body += `<polygon points="${tip.x.toFixed(2)},${tip.y.toFixed(2)} ${(baseX + nx * headWidth).toFixed(2)},${(baseY + ny * headWidth).toFixed(2)} ${(baseX - nx * headWidth).toFixed(2)},${(baseY - ny * headWidth).toFixed(2)}" fill="${escapeXml(fill)}"/>`;
+      }
+
+      if (
+        (colorSettings.assignmentMode === "speed" || colorSettings.assignmentMode === "vertical") &&
+        segment.points.length >= 2
+      ) {
+        const stops = strokeGradientStops(colorSettings, segment, canvasHeight);
+        const [first] = segment.points;
+        const last = segment.points[segment.points.length - 1]!;
+        const gradientId = `grad-${Math.random().toString(36).slice(2, 8)}`;
+        const gradient = `<linearGradient id="${gradientId}" x1="${first!.x}" y1="${first!.y}" x2="${last.x}" y2="${last.y}">${stops
+          .map((stop) => `<stop offset="${(stop.offset * 100).toFixed(1)}%" stop-color="${escapeXml(stop.color)}"/>`)
+          .join("")}</linearGradient>`;
+        return `${gradient}${body.replace(escapeXml(fill), `url(#${gradientId})`)}`;
+      }
+
+      return body;
+    })
+    .join("");
 }
 
 export function buildFlowFieldSvg({
   backgroundHex,
-  color,
-  glyphs,
+  colorSettings,
   height,
   includeBackground,
-  settings,
+  output,
+  strokeSettings,
   width,
 }: BuildFlowFieldSvgOptions): string {
-  const { b, g, r } = (() => {
-    const value = backgroundHex.replace("#", "");
-    return {
-      b: Number.parseInt(value.slice(4, 6), 16),
-      g: Number.parseInt(value.slice(2, 4), 16),
-      r: Number.parseInt(value.slice(0, 2), 16),
-    };
-  })();
-  const markerRgb = (() => {
-    const value = color.hex.replace("#", "");
-    return {
-      b: Number.parseInt(value.slice(4, 6), 16),
-      g: Number.parseInt(value.slice(2, 4), 16),
-      r: Number.parseInt(value.slice(0, 2), 16),
-    };
-  })();
-  const markerFill = `rgba(${markerRgb.r},${markerRgb.g},${markerRgb.b},${color.opacity / 100})`;
   const parts: string[] = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
   ];
 
   if (includeBackground) {
-    parts.push(
-      `<rect width="${width}" height="${height}" fill="${escapeXml(backgroundHex)}" />`,
-    );
-    void r;
-    void g;
-    void b;
+    parts.push(`<rect width="${width}" height="${height}" fill="${escapeXml(backgroundHex)}" />`);
   }
 
-  const markerGroup = glyphs.map((glyph) => glyphToSvg(glyph, settings, markerFill)).join("");
-  parts.push(`<g data-flow-markers="">${markerGroup}</g>`);
+  const strokeGroup = output.strokes
+    .map((stroke) => strokeToSvg(stroke, colorSettings, strokeSettings, height))
+    .join("");
+  parts.push(`<g data-flow-strokes="">${strokeGroup}</g>`);
   parts.push("</svg>");
   return parts.join("");
 }
+
+export type { FlowMarkerColor };

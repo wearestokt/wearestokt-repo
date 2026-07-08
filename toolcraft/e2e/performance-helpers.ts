@@ -170,6 +170,14 @@ export async function measureToolcraftInteraction(
   };
 }
 
+export async function measureToolcraftScenario(
+  page: Page,
+  action: () => Promise<void>,
+  options: ToolcraftInteractionOptions = {},
+): Promise<ToolcraftInteractionResult> {
+  return measureToolcraftInteraction(page, action, options);
+}
+
 export async function measureToolcraftAnimationFrames(
   page: Page,
   frameCount = 120,
@@ -425,6 +433,22 @@ export async function dragToolcraftSliderToValue(
   await dragToolcraftSliderByLabel(page, label, Math.min(1, Math.max(0, ratio)));
 }
 
+export async function setToolcraftSliderValue(
+  page: Page,
+  label: string,
+  value: number,
+): Promise<void> {
+  const field = await getToolcraftFieldByLabel(page, label);
+  await field.getByRole("button", { name: `Edit ${label} value` }).click();
+  const input = field.getByRole("textbox", { name: `${label} value` });
+  await expect(input, `Editable slider "${label}" should expose a value editor`).toBeVisible();
+  await input.fill(String(value));
+  await input.press("Enter");
+  await expect(field.getByRole("button", { name: `Edit ${label} value` })).toContainText(
+    String(value),
+  );
+}
+
 export async function dragToolcraftSliderToPerformanceStressValue(
   page: Page,
   label: string,
@@ -439,7 +463,7 @@ export async function dragToolcraftSliderToPerformanceStressValue(
     );
   }
 
-  await dragToolcraftSliderToValue(page, label, value);
+  await setToolcraftSliderValue(page, label, value);
 }
 
 export async function expectToolcraftCanvasBackingPixelsForRenderScale(

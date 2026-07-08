@@ -7,38 +7,88 @@ import type { ToolcraftState } from "@/toolcraft/runtime";
 import { useToolcraft } from "@/toolcraft/runtime/react";
 
 import {
-  buildFlowGlyphs,
-  type FlowFieldSettings,
-  type FlowGlyph,
-  type FlowGuideSettings,
-  type FlowMarkerStyle,
-} from "./flow-field-math";
+  colorForStroke,
+  colorForStrokePoint,
+  type FlowColorSettings,
+} from "./flow-color-ramp";
 import {
-  defaultFlowGuideSettings,
-  scaleGuideSettings,
-  type FlowGuidePath,
-} from "./flow-guide-math";
+  CUSTOM_SLOT_COUNT,
+  defaultFlowPaletteSettings,
+  type FlowPaletteSettings,
+  type PalettePresetId,
+} from "./flow-palette";
+import type { FlowFieldPattern, SnapAngles } from "./flow-vector-field";
+import {
+  defaultFlowPathSettings,
+  scalePathSettings,
+  type FlowPath,
+  type FlowPathSettings,
+} from "./flow-path-math";
+import {
+  buildStrokeRibbon,
+  drawArrowHead,
+  drawHatchFill,
+  drawRectangleStroke,
+  drawRibbonOnCanvas,
+  drawStrokeCenterline,
+  splitStrokeIntoDashes,
+  type StrokeStyleOptions,
+} from "./flow-stroke-geometry";
+import {
+  buildFlowOutput,
+  type FlowMarkerStyle,
+  type FlowOutput,
+  type FlowStroke,
+  type FlowTaper,
+  type SpacingMode,
+  type StreamSettings,
+} from "./flow-streamline-math";
 
 export type FlowMarkerColor = {
   hex: string;
   opacity: number;
 };
 
-const defaultSettings: FlowFieldSettings = {
-  density: 22,
-  direction: 200,
-  frequency: 28,
-  jitter: 35,
-  markerLength: 38,
-  markerStyle: "wedge",
-  markerThickness: 12,
-  pattern: "currents",
-  swirl: 30,
-  turbulence: 24,
+export type StrokeSettings = {
+  headSize: number;
+  sizeVariety: number;
+  style: FlowMarkerStyle;
+  taper: FlowTaper;
+  width: number;
+  widthBySpeed: number;
 };
 
-const defaultMarkerColor: FlowMarkerColor = { hex: "#FFFFFF", opacity: 100 };
-const defaultBackgroundHex = "#3B5BE0";
+const defaultField = {
+  direction: 200,
+  frequency: 14,
+  pattern: "currents" as FlowFieldPattern,
+  seed: 21,
+  snapAngles: "off" as SnapAngles,
+  swirl: 8,
+  turbulence: 10,
+};
+
+const defaultStreams: StreamSettings = {
+  density: 16,
+  gap: 4,
+  lengthContrast: 75,
+  lengthMax: 220,
+  lengthMin: 10,
+  margin: 24,
+  smoothness: 72,
+  spacingMode: "even",
+};
+
+const defaultStroke: StrokeSettings = {
+  headSize: 1,
+  sizeVariety: 15,
+  style: "line",
+  taper: "tail",
+  width: 2,
+  widthBySpeed: 35,
+};
+
+const defaultBackgroundHex = "#0A1E3D";
 
 function asNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -63,221 +113,325 @@ function asHex(value: unknown, fallback: string): string {
   return fallback;
 }
 
-/** Read art-direction settings from runtime state values. */
-export function readFlowFieldSettings(state: ToolcraftState): FlowFieldSettings {
+function readPaths(state: ToolcraftState): FlowPath[] {
+  const raw = state.values["paths.data"];
+  if (!raw || typeof raw !== "object" || !Array.isArray((raw as { paths?: unknown }).paths)) {
+    return [];
+  }
+  return (raw as { paths: FlowPath[] }).paths;
+}
+
+export function readFlowFieldSettings(state: ToolcraftState) {
   const values = state.values;
   return {
-    density: asNumber(values["field.density"], defaultSettings.density),
-    direction: asNumber(values["flow.direction"], defaultSettings.direction),
-    frequency: asNumber(values["flow.frequency"], defaultSettings.frequency),
-    jitter: asNumber(values["field.jitter"], defaultSettings.jitter),
-    markerLength: asNumber(values["marker.length"], defaultSettings.markerLength),
-    markerStyle: asString<FlowMarkerStyle>(
-      values["marker.style"],
-      ["wedge", "arrow", "line", "dart"],
-      defaultSettings.markerStyle,
-    ),
-    markerThickness: asNumber(values["marker.thickness"], defaultSettings.markerThickness),
+    direction: asNumber(values["flow.direction"], defaultField.direction),
+    frequency: asNumber(values["flow.frequency"], defaultField.frequency),
     pattern: asString(
       values["flow.pattern"],
-      ["currents", "vortex", "waves", "turbulent"] as const,
-      defaultSettings.pattern,
+      ["currents", "vortex", "waves", "turbulent", "radial"] as const,
+      defaultField.pattern,
     ),
-    swirl: asNumber(values["flow.swirl"], defaultSettings.swirl),
-    turbulence: asNumber(values["flow.turbulence"], defaultSettings.turbulence),
+    seed: asNumber(values["flow.seed"], defaultField.seed),
+    snapAngles: asString(
+      values["flow.snapAngles"],
+      ["off", "45", "60", "90"] as const,
+      defaultField.snapAngles,
+    ),
+    swirl: asNumber(values["flow.swirl"], defaultField.swirl),
+    turbulence: asNumber(values["flow.turbulence"], defaultField.turbulence),
   };
 }
 
-export function readFlowMarkerColor(state: ToolcraftState): FlowMarkerColor {
-  const raw = state.values["marker.color"];
-  if (raw && typeof raw === "object") {
-    const hex = asHex(raw, defaultMarkerColor.hex);
-    const opacity = asNumber((raw as { opacity?: unknown }).opacity, defaultMarkerColor.opacity);
-    return { hex, opacity: Math.min(100, Math.max(0, opacity)) };
-  }
-  return defaultMarkerColor;
+export function readStreamSettings(state: ToolcraftState): StreamSettings {
+  const values = state.values;
+  return {
+    density: asNumber(values["streams.density"], defaultStreams.density),
+    gap: asNumber(values["streams.gap"], defaultStreams.gap),
+    lengthContrast: asNumber(values["streams.lengthContrast"], defaultStreams.lengthContrast),
+    lengthMax: asNumber(values["streams.lengthMax"], defaultStreams.lengthMax),
+    lengthMin: asNumber(values["streams.lengthMin"], defaultStreams.lengthMin),
+    margin: asNumber(values["streams.margin"], defaultStreams.margin),
+    smoothness: asNumber(values["streams.smoothness"], defaultStreams.smoothness),
+    spacingMode: asString(
+      values["streams.spacingMode"],
+      ["even", "packed", "loose"] as const,
+      defaultStreams.spacingMode,
+    ),
+  };
+}
+
+export function readStrokeSettings(state: ToolcraftState): StrokeSettings {
+  const values = state.values;
+  return {
+    headSize: asNumber(values["stroke.headSize"], defaultStroke.headSize),
+    sizeVariety: asNumber(values["stroke.sizeVariety"], defaultStroke.sizeVariety),
+    style: asString(
+      values["stroke.style"],
+      ["arrow", "dash", "hatch", "line", "rectangle"] as const,
+      defaultStroke.style,
+    ),
+    taper: asString(values["stroke.taper"], ["both", "head", "none", "tail"] as const, defaultStroke.taper),
+    width: asNumber(values["stroke.width"], defaultStroke.width),
+    widthBySpeed: asNumber(values["stroke.widthBySpeed"], defaultStroke.widthBySpeed),
+  };
+}
+
+export function readFlowPaletteSettings(state: ToolcraftState): FlowPaletteSettings {
+  const values = state.values;
+  const presetId = asString(
+    values["color.palette"],
+    [
+      "ocean",
+      "ember",
+      "newsprint",
+      "golden-hour",
+      "neon",
+      "monochrome",
+      "ink",
+      "pastel",
+      "twilight",
+      "custom",
+    ] as const,
+    defaultFlowPaletteSettings.presetId,
+  );
+
+  const customSlots = Array.from({ length: CUSTOM_SLOT_COUNT }, (_, index) => {
+    const slotKey = `color.custom${index + 1}` as const;
+    const defaultSlot = defaultFlowPaletteSettings.customSlots[index];
+    const slot = values[slotKey];
+    return {
+      hex: asHex(slot, defaultSlot?.hex ?? "#FFFFFF"),
+      weight: defaultSlot?.weight ?? 20,
+    };
+  });
+
+  return {
+    assignmentMode: asString(
+      values["color.assignmentMode"],
+      ["weighted", "inheritance", "speed", "vertical"] as const,
+      defaultFlowPaletteSettings.assignmentMode,
+    ),
+    customSlots,
+    opacity: asNumber(values["color.opacity"], defaultFlowPaletteSettings.opacity),
+    presetId: presetId as PalettePresetId,
+  };
+}
+
+/** @deprecated Use readFlowPaletteSettings */
+export const readFlowColorSettings = readFlowPaletteSettings;
+
+export function readFlowPathSettings(state: ToolcraftState): FlowPathSettings {
+  return {
+    lengthContrast: asNumber(
+      state.values["streams.lengthContrast"],
+      defaultFlowPathSettings.lengthContrast,
+    ),
+    paths: readPaths(state),
+    reach: asNumber(state.values["paths.reach"], defaultFlowPathSettings.reach),
+    smoothness: asNumber(state.values["streams.smoothness"], defaultFlowPathSettings.smoothness),
+    strength: asNumber(state.values["paths.strength"], defaultFlowPathSettings.strength),
+    thickness: asNumber(state.values["stroke.width"], defaultFlowPathSettings.thickness),
+  };
 }
 
 export function readFlowBackgroundHex(state: ToolcraftState): string {
   return asHex(state.values["appearance.background"], defaultBackgroundHex);
 }
 
-function readGuidePaths(state: ToolcraftState): FlowGuidePath[] {
-  const raw = state.values["guides.paths"];
-  if (!raw || typeof raw !== "object" || !Array.isArray((raw as { paths?: unknown }).paths)) {
-    return [];
-  }
-  return (raw as { paths: FlowGuidePath[] }).paths;
+export function readFlowMarkerColor(state: ToolcraftState): FlowMarkerColor {
+  const palette = readFlowPaletteSettings(state);
+  const hex = palette.customSlots[0]?.hex ?? "#E8F4FF";
+  return { hex, opacity: palette.opacity };
 }
 
-/** Read spline guide settings from runtime state values. */
-export function readFlowGuideSettings(state: ToolcraftState): FlowGuideSettings {
-  const paths = readGuidePaths(state);
-  return {
-    influence: asNumber(state.values["guides.influence"], defaultFlowGuideSettings.influence),
-    maskUninfluenced:
-      state.values["guides.maskUninfluenced"] === true,
-    paths,
-    reach: asNumber(state.values["guides.reach"], defaultFlowGuideSettings.reach),
-  };
+type TraceCacheKey = string;
+const traceCache = new Map<TraceCacheKey, FlowOutput>();
+
+function buildTraceCacheKey(
+  width: number,
+  height: number,
+  fieldSettings: ReturnType<typeof readFlowFieldSettings>,
+  pathSettings: FlowPathSettings,
+  streamSettings: StreamSettings,
+  paletteSettings: FlowPaletteSettings,
+  strokeStyle: FlowMarkerStyle,
+  strokeWidth: number,
+  sizeVariety: number,
+): string {
+  return JSON.stringify({
+    fieldSettings,
+    height,
+    paletteSettings,
+    pathSettings,
+    sizeVariety,
+    streamSettings,
+    strokeStyle,
+    strokeWidth,
+    width,
+  });
 }
 
-export function buildFlowGlyphsForState(
+export function buildFlowOutputForState(
   width: number,
   height: number,
   state: ToolcraftState,
-): FlowGlyph[] {
+): FlowOutput {
   const canvasWidth = state.canvas.size.width;
   const canvasHeight = state.canvas.size.height;
-  const guideSettings = scaleGuideSettings(
-    readFlowGuideSettings(state),
+  const pathSettings = scalePathSettings(
+    readFlowPathSettings(state),
     canvasWidth,
     canvasHeight,
     width,
     height,
   );
-  return buildFlowGlyphs(width, height, readFlowFieldSettings(state), guideSettings);
+  const fieldSettings = readFlowFieldSettings(state);
+  const streamSettings = readStreamSettings(state);
+  const strokeSettings = readStrokeSettings(state);
+  const paletteSettings = readFlowPaletteSettings(state);
+  const cacheKey = buildTraceCacheKey(
+    width,
+    height,
+    fieldSettings,
+    pathSettings,
+    streamSettings,
+    paletteSettings,
+    strokeSettings.style,
+    strokeSettings.width,
+    strokeSettings.sizeVariety,
+  );
+  const cached = traceCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const output = buildFlowOutput(
+    width,
+    height,
+    fieldSettings,
+    pathSettings,
+    streamSettings,
+    strokeSettings.style,
+    strokeSettings.width,
+    paletteSettings,
+    strokeSettings.sizeVariety,
+  );
+  traceCache.set(cacheKey, output);
+  if (traceCache.size > 12) {
+    const first = traceCache.keys().next().value;
+    if (first) {
+      traceCache.delete(first);
+    }
+  }
+  return output;
 }
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const value = hex.replace("#", "");
-  return {
-    b: Number.parseInt(value.slice(4, 6), 16),
-    g: Number.parseInt(value.slice(2, 4), 16),
-    r: Number.parseInt(value.slice(0, 2), 16),
-  };
-}
-
-function markerPath(
+function drawStyledStroke(
   context: CanvasRenderingContext2D,
-  style: FlowMarkerStyle,
-  length: number,
-  thickness: number,
+  stroke: FlowStroke,
+  paletteSettings: FlowPaletteSettings,
+  strokeOptions: StrokeStyleOptions,
+  canvasHeight: number,
+  globalStyle: FlowMarkerStyle,
 ): void {
-  const half = length / 2;
-  const t = thickness / 2;
+  const style = globalStyle;
+  const fill = colorForStroke(stroke, paletteSettings);
+  const useRibbon =
+    style !== "rectangle" &&
+    (strokeOptions.taper !== "none" || (strokeOptions.widthBySpeed ?? 0) > 0);
+  const segments =
+    style === "dash"
+      ? splitStrokeIntoDashes(stroke).map((segment) => ({ ...stroke, points: segment.points }))
+      : [stroke];
 
-  switch (style) {
-    case "line": {
-      context.lineWidth = thickness;
-      context.lineCap = "round";
-      context.beginPath();
-      context.moveTo(-half, 0);
-      context.lineTo(half, 0);
-      context.stroke();
-      return;
+  for (const segment of segments) {
+    const segmentFill =
+      paletteSettings.assignmentMode === "speed" || paletteSettings.assignmentMode === "vertical"
+        ? colorForStrokePoint(
+            paletteSettings,
+            segment,
+            Math.floor(segment.points.length / 2),
+            canvasHeight,
+          )
+        : fill;
+
+    context.save();
+    context.fillStyle = segmentFill;
+    context.strokeStyle = segmentFill;
+    context.lineCap = style === "rectangle" ? "butt" : "round";
+    context.lineJoin = style === "rectangle" ? "miter" : "round";
+
+    if (style === "rectangle") {
+      drawRectangleStroke(context, segment, segment.thickness);
+    } else if (style === "hatch") {
+      const ribbon = buildStrokeRibbon(segment, { ...strokeOptions, taper: "none" });
+      drawRibbonOnCanvas(context, ribbon);
+      context.strokeStyle = segmentFill;
+      drawHatchFill(context, ribbon, segment.sizeClass === "xl" ? 8 : 5);
+    } else if (useRibbon) {
+      const ribbon = buildStrokeRibbon(segment, strokeOptions);
+      drawRibbonOnCanvas(context, ribbon);
+    } else {
+      context.lineWidth = segment.thickness;
+      drawStrokeCenterline(context, segment.points);
     }
-    case "arrow": {
-      const headWidth = Math.max(thickness * 1.5, length * 0.18);
-      const headBase = half - headWidth * 1.4;
-      context.lineWidth = thickness;
-      context.lineCap = "round";
-      context.beginPath();
-      context.moveTo(-half, 0);
-      context.lineTo(headBase, 0);
-      context.stroke();
-      context.beginPath();
-      context.moveTo(half, 0);
-      context.lineTo(headBase, headWidth);
-      context.lineTo(headBase, -headWidth);
-      context.closePath();
-      context.fill();
-      return;
+
+    if (style === "arrow" && segment.points.length >= 2) {
+      const tip = segment.points[segment.points.length - 1]!;
+      const from = segment.points[segment.points.length - 2]!;
+      drawArrowHead(context, tip, from, segment.thickness, strokeOptions.headSize ?? 1);
     }
-    case "dart": {
-      context.beginPath();
-      context.moveTo(half, 0);
-      context.lineTo(-half, t);
-      context.lineTo(-half * 0.55, 0);
-      context.lineTo(-half, -t);
-      context.closePath();
-      context.fill();
-      return;
-    }
-    case "wedge":
-    default: {
-      context.beginPath();
-      context.moveTo(half, 0);
-      context.lineTo(-half, t);
-      context.lineTo(-half, -t);
-      context.closePath();
-      context.fill();
-      return;
-    }
+    context.restore();
   }
 }
 
 export type DrawFlowFieldOptions = {
-  width: number;
+  colorSettings: FlowColorSettings;
   height: number;
-  settings: FlowFieldSettings;
-  color: FlowMarkerColor;
-  glyphs?: readonly FlowGlyph[];
+  output: FlowOutput;
+  strokeSettings: StrokeSettings;
+  width: number;
 };
 
-/**
- * Shared rasterize pass. Draws the flow markers in CSS-pixel coordinate space
- * [0..width] × [0..height]. Used identically by the live preview and the PNG
- * export so output matches what the user sees.
- */
 export function drawFlowField(
   context: CanvasRenderingContext2D,
-  { color, glyphs, height, settings, width }: DrawFlowFieldOptions,
+  { colorSettings, height, output, strokeSettings, width }: DrawFlowFieldOptions,
 ): void {
-  const instances = glyphs ?? buildFlowGlyphs(width, height, settings);
-  const { b, g, r } = hexToRgb(color.hex);
-  const fill = `rgba(${r}, ${g}, ${b}, ${color.opacity / 100})`;
+  const strokeOptions: StrokeStyleOptions = {
+    headSize: strokeSettings.headSize,
+    taper: strokeSettings.taper,
+    widthBySpeed: strokeSettings.widthBySpeed,
+  };
 
   context.save();
-  context.fillStyle = fill;
-  context.strokeStyle = fill;
-
-  for (const glyph of instances) {
-    context.save();
-    context.translate(glyph.x, glyph.y);
-    context.rotate(glyph.angle);
-    markerPath(context, settings.markerStyle, settings.markerLength * glyph.scale, settings.markerThickness);
-    context.restore();
+  for (const stroke of output.strokes) {
+    drawStyledStroke(
+      context,
+      stroke,
+      colorSettings,
+      strokeOptions,
+      height,
+      strokeSettings.style,
+    );
   }
-
   context.restore();
+  void width;
 }
 
-/**
- * Live Canvas 2D preview. Renders into a backing store scaled by the runtime
- * render scale × device pixel ratio so the field stays crisp; zoom/pan are
- * handled by the canvas shell via CSS transform, so this never redraws on
- * viewport interactions.
- */
 export function FlowFieldCanvas(): React.JSX.Element {
   const { state } = useToolcraft();
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const deferredState = React.useDeferredValue(state);
 
-  const size = state.canvas.size;
-  const settings = readFlowFieldSettings(state);
-  const guideSettings = readFlowGuideSettings(state);
-  const color = readFlowMarkerColor(state);
-  const backgroundHex = readFlowBackgroundHex(state);
-  const includeBackground = shouldIncludeToolcraftPreviewBackground({ state });
-  const renderScale = asNumber(state.values["canvas.renderScale"], 1);
+  const size = deferredState.canvas.size;
+  const colorSettings = readFlowPaletteSettings(deferredState);
+  const strokeSettings = readStrokeSettings(deferredState);
+  const backgroundHex = readFlowBackgroundHex(deferredState);
+  const includeBackground = shouldIncludeToolcraftPreviewBackground({ state: deferredState });
+  const renderScale = asNumber(deferredState.values["canvas.renderScale"], 1);
 
-  const glyphs = React.useMemo(
-    () => buildFlowGlyphsForState(size.width, size.height, state),
-    [
-      size.width,
-      size.height,
-      settings.pattern,
-      settings.direction,
-      settings.frequency,
-      settings.swirl,
-      settings.turbulence,
-      settings.density,
-      settings.jitter,
-      guideSettings.influence,
-      guideSettings.reach,
-      guideSettings.maskUninfluenced,
-      guideSettings.paths,
-    ],
+  const output = React.useMemo(
+    () => buildFlowOutputForState(size.width, size.height, deferredState),
+    [deferredState, size.height, size.width],
   );
 
   React.useLayoutEffect(() => {
@@ -305,19 +459,22 @@ export function FlowFieldCanvas(): React.JSX.Element {
       context.fillStyle = backgroundHex;
       context.fillRect(0, 0, size.width, size.height);
     }
-    drawFlowField(context, { color, glyphs, height: size.height, settings, width: size.width });
+    drawFlowField(context, {
+      colorSettings,
+      height: size.height,
+      output,
+      strokeSettings,
+      width: size.width,
+    });
   }, [
-    glyphs,
+    output,
     size.width,
     size.height,
     renderScale,
     includeBackground,
     backgroundHex,
-    color.hex,
-    color.opacity,
-    settings.markerStyle,
-    settings.markerLength,
-    settings.markerThickness,
+    colorSettings,
+    strokeSettings,
   ]);
 
   return (
@@ -328,3 +485,5 @@ export function FlowFieldCanvas(): React.JSX.Element {
     />
   );
 }
+
+export const buildFlowGlyphsForState = buildFlowOutputForState;

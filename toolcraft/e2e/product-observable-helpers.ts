@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 const defaultProductObservableSelector = [
   "[data-toolcraft-product-output]",
   "[data-toolcraft-product-text]",
+  "[data-toolcraft-flow-canvas]",
   "[data-toolcraft-canvas-slot] canvas",
   "[data-toolcraft-canvas-slot] svg",
   "[data-toolcraft-canvas-world] canvas",

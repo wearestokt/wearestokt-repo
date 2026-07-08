@@ -11,36 +11,37 @@ import {
 } from "@/toolcraft/runtime/react";
 
 import { appSchema } from "../app/app-schema";
+import { FlowPathDevSeedApi } from "../app/flow-path-dev-seed";
+import { FlowPathOverlay } from "../app/flow-path-overlay";
 import {
-  addGuidePath,
-  deleteActiveGuidePath,
-  FlowGuideOverlay,
-} from "../app/flow-guide-overlay";
-import {
-  buildFlowGlyphsForState,
+  buildFlowOutputForState,
   drawFlowField,
   FlowFieldCanvas,
   readFlowBackgroundHex,
-  readFlowFieldSettings,
-  readFlowMarkerColor,
+  readFlowColorSettings,
+  readStrokeSettings,
 } from "../app/flow-field-renderer";
 import { buildFlowFieldSvg } from "../app/flow-field-svg-export";
+import { buildShufflePatch } from "../app/flow-shuffle";
+import { FlowShuffleTailSync, queueShuffleTailPatch } from "../app/flow-shuffle-tail-sync";
+import { PalettePresetSync, TexturePresetSync } from "../app/texture-preset-sync";
+import { createPathId } from "../app/flow-path-math";
 
 function buildFlowExportCanvas(state: ToolcraftState): HTMLCanvasElement {
-  const settings = readFlowFieldSettings(state);
-  const color = readFlowMarkerColor(state);
+  const colorSettings = readFlowColorSettings(state);
+  const strokeSettings = readStrokeSettings(state);
   const includeBackground = shouldIncludeToolcraftPreviewBackground({ state });
-  const glyphs = buildFlowGlyphsForState(state.canvas.size.width, state.canvas.size.height, state);
+  const output = buildFlowOutputForState(state.canvas.size.width, state.canvas.size.height, state);
 
   return createToolcraftPngExportCanvas({
     background: readFlowBackgroundHex(state),
     includeBackground,
     render: ({ context, cssHeight, cssWidth }) => {
       drawFlowField(context, {
-        color,
-        glyphs,
+        colorSettings,
         height: cssHeight,
-        settings,
+        output,
+        strokeSettings,
         width: cssWidth,
       });
     },
@@ -53,26 +54,23 @@ function buildFlowExportCanvas(state: ToolcraftState): HTMLCanvasElement {
 }
 
 function buildFlowExportSvg(state: ToolcraftState): string {
-  const settings = readFlowFieldSettings(state);
-  const color = readFlowMarkerColor(state);
+  const colorSettings = readFlowColorSettings(state);
+  const strokeSettings = readStrokeSettings(state);
   const includeBackground = shouldIncludeToolcraftPreviewBackground({ state });
   const resolution =
     typeof state.values["export.image.resolution"] === "string"
       ? state.values["export.image.resolution"]
       : undefined;
-  const { height, width } = getToolcraftImageExportSize({
-    resolution,
-    state,
-  });
-  const glyphs = buildFlowGlyphsForState(width, height, state);
+  const { height, width } = getToolcraftImageExportSize({ resolution, state });
+  const output = buildFlowOutputForState(width, height, state);
 
   return buildFlowFieldSvg({
     backgroundHex: readFlowBackgroundHex(state),
-    color,
-    glyphs,
+    colorSettings,
     height,
     includeBackground,
-    settings,
+    output,
+    strokeSettings,
     width,
   });
 }
@@ -107,19 +105,82 @@ async function handlePanelAction({
   state,
 }: ToolcraftPanelActionContext): Promise<void> {
   if (action.value === "add-path") {
+    const id = createPathId();
+    const existing = state.values["paths.data"];
+    const paths =
+      existing && typeof existing === "object" && Array.isArray((existing as { paths?: unknown }).paths)
+        ? (existing as { paths: { id: string; points: { x: number; y: number }[] }[] }).paths
+        : [];
     dispatch({
-      target: "guides.paths",
+      target: "paths.data",
       type: "controls.setValue",
-      value: addGuidePath(state),
+      value: {
+        activePathId: id,
+        paths: [...paths, { id, points: [] }],
+      },
     });
     return;
   }
 
   if (action.value === "delete-path") {
+    const existing = state.values["paths.data"];
+    if (!existing || typeof existing !== "object") {
+      return;
+    }
+    const raw = existing as { activePathId?: string | null; paths?: { id: string; points: unknown[] }[] };
+    const activeId = raw.activePathId;
+    const nextPaths = (raw.paths ?? []).filter((path) => path.id !== activeId);
     dispatch({
-      target: "guides.paths",
+      target: "paths.data",
       type: "controls.setValue",
-      value: deleteActiveGuidePath(state),
+      value: {
+        activePathId: nextPaths[0]?.id ?? null,
+        paths: nextPaths,
+      },
+    });
+    return;
+  }
+
+  if (action.value === "randomize-seed") {
+    const current =
+      typeof state.values["flow.seed"] === "number" ? state.values["flow.seed"] : 21;
+    dispatch({
+      target: "flow.seed",
+      type: "controls.setValue",
+      value: (current + 137) % 10000,
+    });
+    return;
+  }
+
+  if (action.value === "shuffle") {
+    const currentSeed =
+      typeof state.values["flow.seed"] === "number" ? state.values["flow.seed"] : 21;
+    const patch = buildShufflePatch(currentSeed);
+    dispatch({
+      target: "flow.seed",
+      type: "controls.setValue",
+      value: patch["flow.seed"],
+    });
+    queueMicrotask(() => {
+      dispatch({
+        target: "color.palette",
+        type: "controls.setValue",
+        value: patch["color.palette"],
+      });
+      dispatch({
+        target: "flow.pattern",
+        type: "controls.setValue",
+        value: patch["flow.pattern"],
+      });
+      dispatch({
+        target: "flow.snapAngles",
+        type: "controls.setValue",
+        value: patch["flow.snapAngles"],
+      });
+    });
+    queueShuffleTailPatch({
+      "streams.spacingMode": patch["streams.spacingMode"],
+      "stroke.sizeVariety": patch["stroke.sizeVariety"],
     });
     return;
   }
@@ -165,14 +226,18 @@ async function handlePanelAction({
   reportProgress(1);
 }
 
-function FlowFieldCanvasWithGuides(): React.JSX.Element {
+function FlowFieldCanvasWithPaths(): React.JSX.Element {
   const { state } = useToolcraft();
   const { height, width } = state.canvas.size;
 
   return (
     <div className="relative size-full" data-toolcraft-product-output="">
+      <TexturePresetSync />
+      <PalettePresetSync />
+      <FlowShuffleTailSync />
+      <FlowPathDevSeedApi />
       <FlowFieldCanvas />
-      <FlowGuideOverlay canvasHeight={height} canvasWidth={width} />
+      <FlowPathOverlay canvasHeight={height} canvasWidth={width} />
     </div>
   );
 }
@@ -180,7 +245,7 @@ function FlowFieldCanvasWithGuides(): React.JSX.Element {
 export function AppHome(): React.JSX.Element {
   return (
     <ToolcraftApp
-      canvasContent={<FlowFieldCanvasWithGuides />}
+      canvasContent={<FlowFieldCanvasWithPaths />}
       className="h-dvh min-h-dvh"
       onPanelAction={handlePanelAction}
       renderDefaultCanvasMedia={false}

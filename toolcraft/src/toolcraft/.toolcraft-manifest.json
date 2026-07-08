@@ -29,7 +29,7 @@
     "runtime/react/toolcraft-root.tsx": "7f548a6552caccd5adb48d863997bcfc25353f0dc957b0758d9ff848e2b33dd4",
     "runtime/react/use-toolcraft.ts": "740c5b4b961bee48c8409b149d79897cf580eabc314077dca51e05c10693d5b6",
     "runtime/schema/canvas-aspect-ratio-presets.ts": "32f6d1b0faa5aa02f67a4411475300cd8d92aa4e3ef2c6ea21eccf5fe8759899",
-    "runtime/schema/define-toolcraft.ts": "3e51517af27c892b85809caa4c15853508f6813c5b1adbc612559360fc941d95",
+    "runtime/schema/define-toolcraft.ts": "dcfa3c28a767d8a7030cd0d66567bf343a0ff1d7877954ede235f8300abd9c7a",
     "runtime/schema/keyframe-capability.ts": "5331515a1aad2b4b5704216be11cbf3a7eda19aca542046ee19d023df5c193a4",
     "runtime/schema/runtime-targets.ts": "8653da20149d8b989126da70d323cf125f22d8aa1f5a8bd55bf641c4d2b93d5f",
     "runtime/schema/types.ts": "12dbeff41897ac08cc0bd225b27b22cb6ceac37a46f587923479dd2409c64381",

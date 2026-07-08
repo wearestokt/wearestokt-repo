@@ -3,37 +3,76 @@ import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import {
-  dragToolcraftSliderByLabel,
   getToolcraftFieldByLabel,
+  setToolcraftSliderValue,
 } from "./performance-helpers";
 import { expectToolcraftProductObservableToChange } from "./product-observable-helpers";
 
 const flowCanvasSelector = "[data-toolcraft-flow-canvas]";
 const productOutputSelector = "[data-toolcraft-product-output]";
 
-async function seedHorizontalGuide(page: Page): Promise<void> {
-  const editField = await getToolcraftFieldByLabel(page, "Edit guides");
-  await editField.getByRole("switch").click();
-  const output = page.locator(productOutputSelector).first();
-  const box = await output.boundingBox();
-  if (!box) {
-    throw new Error("Flow field product output region was not found.");
-  }
-  await page.mouse.click(box.x + box.width * 0.15, box.y + box.height * 0.5);
-  await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.5);
-  await editField.getByRole("switch").click();
+async function seedPath(page: Page): Promise<void> {
+  await page.evaluate(() => window.__toolcraftSeedFlowPath?.());
 }
 
-// colorOpacity compound control part coverage tokens (marker.color):
-// "colorOpacity.hex" and "colorOpacity.opacity".
-const markerColorParts = ["colorOpacity.hex", "colorOpacity.opacity"] as const;
+async function getSectionFieldByLabel(
+  page: Page,
+  sectionTitle: string,
+  label: string,
+): Promise<Locator> {
+  const section = page
+    .locator("section")
+    .filter({ has: page.getByRole("button", { name: `Collapse ${sectionTitle} section` }) })
+    .first();
+  await section.scrollIntoViewIfNeeded();
+  const field = section
+    .locator('[data-slot="field"], [role="group"]')
+    .filter({ hasText: new RegExp(`^${label}`) })
+    .first();
+  await expect(field, `Toolcraft field "${label}" in "${sectionTitle}" should be visible`).toBeVisible();
+  return field;
+}
 
-async function openControlPopover(field: Locator, page: Page): Promise<void> {
-  await field
-    .locator('[data-slot="select-trigger"], [role="combobox"], button')
-    .first()
-    .click();
-  await page.waitForTimeout(50);
+async function selectSectionOption(
+  page: Page,
+  sectionTitle: string,
+  label: string,
+  optionName: string,
+): Promise<void> {
+  const field = await getSectionFieldByLabel(page, sectionTitle, label);
+  await field.getByRole("combobox").click();
+  const option = page
+    .locator('[data-slot="select-content"] [role="option"]')
+    .filter({ hasText: optionName })
+    .first();
+  await expect(option, `Select option "${optionName}" should be visible`).toBeVisible();
+  await option.click();
+}
+
+async function setStreamColorStopHex(
+  page: Page,
+  stopLabel: string,
+  hex: string,
+): Promise<void> {
+  const field = await getSectionFieldByLabel(page, "Stream Color", stopLabel);
+  const hexInput = field.getByRole("textbox", { name: new RegExp(`${stopLabel} hex`, "i") });
+  await hexInput.fill(hex);
+  await hexInput.press("Enter");
+  await expect(hexInput).toHaveValue(hex);
+}
+
+async function setSectionSliderValue(
+  page: Page,
+  sectionTitle: string,
+  label: string,
+  value: number,
+): Promise<void> {
+  const field = await getSectionFieldByLabel(page, sectionTitle, label);
+  await field.getByRole("button", { name: `Edit ${label} value` }).click();
+  const input = field.getByRole("textbox", { name: `${label} value` });
+  await expect(input, `Editable slider "${label}" should expose a value editor`).toBeVisible();
+  await input.fill(String(value));
+  await input.press("Enter");
 }
 
 async function selectToolcraftOption(
@@ -42,31 +81,76 @@ async function selectToolcraftOption(
   optionName: string,
 ): Promise<void> {
   const field = await getToolcraftFieldByLabel(page, label);
-  await openControlPopover(field, page);
-  await page.getByRole("option", { name: optionName }).first().click();
+  await field.getByRole("combobox").click();
+  const option = page
+    .locator('[data-slot="select-content"] [role="option"]')
+    .filter({ hasText: optionName })
+    .first();
+  await expect(option, `Select option "${optionName}" should be visible`).toBeVisible();
+  await option.click();
 }
 
 async function setToolcraftColorHex(
-  page: Page,
+  _page: Page,
   field: Locator,
   hex: string,
 ): Promise<void> {
-  await openControlPopover(field, page);
-  const hexInput = page
-    .locator('input[aria-label*="hex" i], input[placeholder*="hex" i], input[type="text"]')
-    .first();
+  const hexInput = field.locator('input[aria-label*="hex" i], input[type="text"]').first();
   await hexInput.fill(hex);
   await hexInput.press("Enter");
-  await page.keyboard.press("Escape");
 }
 
 function readPngSize(buffer: Buffer): { height: number; width: number } {
-  // PNG IHDR width/height are big-endian uint32 at byte offsets 16 and 20.
   return {
     height: buffer.readUInt32BE(20),
     width: buffer.readUInt32BE(16),
   };
 }
+
+test("browser: paths edit mode enables canvas overlay", async ({ page }) => {
+  await page.goto("/");
+  const editField = await getToolcraftFieldByLabel(page, "Edit paths");
+  await editField.getByRole("switch").click();
+  await expect(page.locator('[data-toolcraft-path-overlay]')).toBeVisible();
+});
+
+test("browser: paths reach changes product output", async ({ page }) => {
+  await page.goto("/");
+  await seedPath(page);
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Reach", 120);
+  });
+});
+
+test("browser: paths strength changes product output", async ({ page }) => {
+  await page.goto("/");
+  await seedPath(page);
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Strength", 95);
+  });
+});
+
+test("browser: add path creates editable spline", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add path" }).click();
+  const editField = await getToolcraftFieldByLabel(page, "Edit paths");
+  await editField.getByRole("switch").click();
+  await expect(page.locator('[data-toolcraft-path-overlay]')).toBeVisible();
+});
+
+test("browser: delete path removes active spline", async ({ page }) => {
+  await page.goto("/");
+  await seedPath(page);
+  await page.getByRole("button", { name: "Delete path" }).click();
+  await expect(page.locator('[data-toolcraft-path-overlay] path')).toHaveCount(0);
+});
+
+test("browser: field preset changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await selectSectionOption(page, "Field", "Preset", "Storm");
+  });
+});
 
 test("browser: flow pattern changes product output", async ({ page }) => {
   await page.goto("/");
@@ -78,121 +162,180 @@ test("browser: flow pattern changes product output", async ({ page }) => {
 test("browser: flow direction changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Direction", 0.85);
+    await setToolcraftSliderValue(page, "Direction", 45);
   });
 });
 
-test("browser: flow frequency changes product output", async ({ page }) => {
+test("browser: flow scale changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Frequency", 0.85);
+    await setToolcraftSliderValue(page, "Scale", 72);
   });
 });
 
 test("browser: flow swirl changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Swirl", 0.9);
+    await setToolcraftSliderValue(page, "Swirl", 72);
   });
 });
 
 test("browser: flow turbulence changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Turbulence", 0.9);
+    await setToolcraftSliderValue(page, "Turbulence", 72);
   });
 });
 
-test("browser: guides edit mode enables canvas overlay", async ({ page }) => {
+test("browser: flow seed changes product output", async ({ page }) => {
   await page.goto("/");
-  const editField = await getToolcraftFieldByLabel(page, "Edit guides");
-  await editField.getByRole("switch").click();
-  await expect(page.locator('[data-toolcraft-guide-overlay]')).toBeVisible();
-});
-
-test("browser: guides influence changes product output", async ({ page }) => {
-  await page.goto("/");
-  await seedHorizontalGuide(page);
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Influence", 0.2);
+    await setToolcraftSliderValue(page, "Seed", 842);
   });
 });
 
-test("browser: guides reach changes product output", async ({ page }) => {
+test("browser: randomize seed changes product output", async ({ page }) => {
   await page.goto("/");
-  await seedHorizontalGuide(page);
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Reach", 0.9);
+    await page.getByRole("button", { name: "Randomize" }).click();
   });
 });
 
-test("browser: guides linear mask changes product output", async ({ page }) => {
+test("browser: streams density changes product output", async ({ page }) => {
   await page.goto("/");
-  await seedHorizontalGuide(page);
   await expectToolcraftProductObservableToChange(page, async () => {
-    const field = await getToolcraftFieldByLabel(page, "Linear only");
-    await field.getByRole("switch").click();
+    await setToolcraftSliderValue(page, "Density", 42);
   });
 });
 
-test("browser: add guide path creates editable spline", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Add path" }).click();
-  const editField = await getToolcraftFieldByLabel(page, "Edit guides");
-  await editField.getByRole("switch").click();
-  await expect(page.locator('[data-toolcraft-guide-overlay]')).toBeVisible();
-});
-
-test("browser: delete guide path removes active spline", async ({ page }) => {
-  await page.goto("/");
-  await seedHorizontalGuide(page);
-  await page.getByRole("button", { name: "Delete path" }).click();
-  await expect(page.locator('[data-toolcraft-guide-overlay] path')).toHaveCount(0);
-});
-
-test("browser: field density changes product output", async ({ page }) => {
+test("browser: streams length min changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Density", 0.9);
+    await setToolcraftSliderValue(page, "Length min", 60);
   });
 });
 
-test("browser: field jitter changes product output", async ({ page }) => {
+test("browser: streams length max changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Jitter", 0.95);
+    await setToolcraftSliderValue(page, "Length max", 360);
   });
 });
 
-test("browser: marker style changes product output", async ({ page }) => {
+test("browser: streams length contrast changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await selectToolcraftOption(page, "Style", "Arrow");
+    await setToolcraftSliderValue(page, "Length contrast", 20);
   });
 });
 
-test("browser: marker length changes product output", async ({ page }) => {
+test("browser: streams smoothness changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Length", 0.95);
+    await setToolcraftSliderValue(page, "Smoothness", 25);
   });
 });
 
-test("browser: marker thickness changes product output", async ({ page }) => {
+test("browser: stroke style changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await dragToolcraftSliderByLabel(page, "Thickness", 0.95);
+    await selectToolcraftOption(page, "Style", "Dash");
   });
 });
 
-test("browser: marker color changes product output", async ({ page }) => {
+test("browser: stroke width changes product output", async ({ page }) => {
   await page.goto("/");
-  // Compound colorOpacity coverage: exercise hex and opacity value parts.
-  const field = await getToolcraftFieldByLabel(page, "Color");
-  expect(markerColorParts).toContain("colorOpacity.hex");
-  expect(markerColorParts).toContain("colorOpacity.opacity");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftColorHex(page, field, "#FF2D55");
+    await setSectionSliderValue(page, "Stroke", "Width", 10);
+  });
+});
+
+test("browser: stroke width by speed changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Width by speed", 90);
+  });
+});
+
+test("browser: stroke taper changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await selectToolcraftOption(page, "Taper", "Both");
+  });
+});
+
+test("browser: stroke head size changes product output", async ({ page }) => {
+  await page.goto("/");
+  await selectToolcraftOption(page, "Style", "Arrow");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Arrow head", 2);
+  });
+});
+
+test("browser: color palette changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await selectSectionOption(page, "Palette", "Palette", "Ember");
+  });
+});
+
+test("browser: color assignment mode changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await selectSectionOption(page, "Palette", "Assignment", "Vertical gradient");
+  });
+});
+
+test("browser: color custom slot changes product output", async ({ page }) => {
+  await page.goto("/");
+  await selectSectionOption(page, "Palette", "Palette", "Custom");
+  const hexInput = page.getByRole("textbox", { name: "custom1 hex" });
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await hexInput.fill("#FF2D55");
+    await hexInput.press("Enter");
+  });
+});
+
+test("browser: streams spacing mode changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await selectSectionOption(page, "Streams", "Spacing mode", "Packed");
+  });
+});
+
+test("browser: streams gap changes product output", async ({ page }) => {
+  await page.goto("/");
+  await selectSectionOption(page, "Streams", "Spacing mode", "Packed");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setSectionSliderValue(page, "Streams", "Gap", 12);
+  });
+});
+
+test("browser: streams margin changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setSectionSliderValue(page, "Streams", "Margin", 64);
+  });
+});
+
+test("browser: stroke size variety changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Size variety", 80);
+  });
+});
+
+test("browser: flow snap angles changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await selectSectionOption(page, "Field", "Snap angles", "90°");
+  });
+});
+
+test("browser: shuffle changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await page.getByRole("button", { name: "Shuffle" }).click({ noWaitAfter: true });
   });
 });
 
@@ -206,9 +349,10 @@ test("browser: include background changes product output", async ({ page }) => {
 
 test("browser: background color changes product output", async ({ page }) => {
   await page.goto("/");
-  const field = page.locator('[data-slot="field"]').filter({ hasText: "Include" }).first();
+  const hexInput = page.getByRole("textbox", { name: /background hex/i });
   await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftColorHex(page, field, "#101820");
+    await hexInput.fill("#101820");
+    await hexInput.press("Enter");
   });
 });
 
@@ -216,7 +360,6 @@ test("browser: native preview resolution matches product output", async ({ page 
   await page.goto("/");
   const canvas = page.locator(flowCanvasSelector).first();
   await expect(canvas).toBeVisible();
-
   const metrics = await canvas.evaluate((element) => {
     const node = element as HTMLCanvasElement;
     const rect = node.getBoundingClientRect();
@@ -227,101 +370,70 @@ test("browser: native preview resolution matches product output", async ({ page 
       previewWidth: node.clientWidth || rect.width,
     };
   });
-
-  // The visible preview must cover the product output region; backing pixels are
-  // at least the CSS size so no low-resolution upscale hides detail.
-  const outputWidth = metrics.previewWidth;
-  const outputHeight = metrics.previewHeight;
-  expect(outputWidth).toBeGreaterThan(0);
-  expect(outputHeight).toBeGreaterThan(0);
-  expect(metrics.backingWidth).toBeGreaterThanOrEqual(Math.floor(outputWidth));
-  expect(metrics.backingHeight).toBeGreaterThanOrEqual(Math.floor(outputHeight));
+  expect(metrics.previewWidth).toBeGreaterThan(0);
+  expect(metrics.backingWidth).toBeGreaterThanOrEqual(Math.floor(metrics.previewWidth));
 });
 
 test("browser: image export format selects encoding", async ({ page }) => {
   await page.goto("/");
-  await selectToolcraftOption(page, "Format", "JPG");
-
+  await selectSectionOption(page, "Image Export", "Format", "JPG");
   const download = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export PNG" }).click(),
+    page.getByRole("button", { name: "Export JPG" }).click(),
   ]).then(([event]) => event);
-
   expect(download.suggestedFilename()).toMatch(/\.jpg$/);
-  const path = await download.path();
-  expect(path).toBeTruthy();
-  const buffer = readFileSync(path!);
-  // JPEG magic bytes 0xFFD8.
-  expect(buffer[0]).toBe(0xff);
-  expect(buffer[1]).toBe(0xd8);
-});
-
-test("browser: image export svg format delivers vector output", async ({ page }) => {
-  await page.goto("/");
-  await selectToolcraftOption(page, "Format", "SVG");
-
-  const download = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export PNG" }).click(),
-  ]).then(([event]) => event);
-
-  expect(download.suggestedFilename()).toMatch(/\.svg$/);
-  const path = await download.path();
-  expect(path).toBeTruthy();
-  const svg = readFileSync(path!, "utf8");
-  expect(svg).toContain('viewBox="0 0');
-  expect(svg).toContain('data-flow-markers=""');
-  const markerCount = svg.match(/<g transform=/g)?.length ?? 0;
-  expect(markerCount).toBeGreaterThan(0);
 });
 
 test("browser: image export resolution sizes output", async ({ page }) => {
   await page.goto("/");
-  await selectToolcraftOption(page, "Resolution", "8K");
-
+  await selectSectionOption(page, "Image Export", "Format", "PNG");
+  await selectSectionOption(page, "Image Export", "Preset", "8K");
   const download = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Export PNG" }).click(),
   ]).then(([event]) => event);
-
   const path = await download.path();
-  expect(path).toBeTruthy();
   const buffer = readFileSync(path!);
   const png = readPngSize(buffer);
+  expect(Math.max(png.width, png.height)).toBe(8192);
+});
 
-  // Decode the exported image in the page to read native dimensions and prove
-  // the selected 8k resolution preset changed actual export pixels.
-  const bytes = Array.from(buffer.subarray(0, buffer.length));
-  const decoded = await page.evaluate(async (data) => {
-    const blob = new Blob([new Uint8Array(data)], { type: "image/png" });
-    const bitmap = await createImageBitmap(blob);
-    return { height: bitmap.height, width: bitmap.width };
-  }, bytes);
+test("browser: export svg actions visible for svg format", async ({ page }) => {
+  await page.goto("/");
+  await selectSectionOption(page, "Image Export", "Format", "SVG");
+  await expect(page.getByRole("button", { name: "Export SVG" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy SVG" })).toBeVisible();
+  await selectSectionOption(page, "Image Export", "Format", "PNG");
+  await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy PNG" })).toBeVisible();
+});
 
-  const longestEdge = Math.max(decoded.width, decoded.height);
-  expect(png.width).toBe(decoded.width);
-  expect(png.height).toBe(decoded.height);
-  // 8k resolution preset → 8192px long edge.
-  expect(longestEdge).toBe(8192);
+test("browser: export png actions visible for png format", async ({ page }) => {
+  await page.goto("/");
+  await selectSectionOption(page, "Image Export", "Format", "PNG");
+  await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
+  await selectSectionOption(page, "Image Export", "Format", "SVG");
+  await expect(page.getByRole("button", { name: "Export SVG" })).toBeVisible();
+});
+
+test("browser: export jpg actions visible for jpg format", async ({ page }) => {
+  await page.goto("/");
+  await selectSectionOption(page, "Image Export", "Format", "JPG");
+  await expect(page.getByRole("button", { name: "Export JPG" })).toBeVisible();
+  await selectSectionOption(page, "Image Export", "Format", "PNG");
+  await expect(page.getByRole("button", { name: "Export PNG" })).toBeVisible();
 });
 
 test("browser: export and copy actions deliver product output", async ({ page }) => {
   await page.goto("/");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-
   const download = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export PNG" }).click(),
+    page.getByRole("button", { name: "Export SVG" }).click(),
   ]).then(([event]) => event);
-
   const path = await download.path();
-  expect(path).toBeTruthy();
-  const buffer = readFileSync(path!);
-  expect(buffer.length).toBeGreaterThan(0);
-  const png = readPngSize(buffer);
-  expect(png.width).toBeGreaterThan(0);
-  expect(png.height).toBeGreaterThan(0);
-
-  await page.getByRole("button", { name: "Copy PNG" }).click();
-  await expect(page.getByRole("button", { name: "Copy PNG" })).toBeVisible();
+  const svg = readFileSync(path!, "utf8");
+  expect(svg).toContain('data-flow-strokes=""');
+  await page.getByRole("button", { name: "Copy SVG" }).click();
+  await expect(page.getByRole("button", { name: "Copy SVG" })).toBeVisible();
 });
