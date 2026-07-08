@@ -811,6 +811,46 @@ function createMergedPanelActionsControl(
   };
 }
 
+function hasPanelActionVisibilityGate(control: ToolcraftControlSchema): boolean {
+  return isPanelActionsControl(control) && control.visibleWhen !== undefined;
+}
+
+function partitionPanelActionEntries(
+  entries: readonly [string, ToolcraftControlSchema][],
+): {
+  conditionalEntries: [string, ToolcraftControlSchema][];
+  mergeableEntries: [string, ToolcraftControlSchema][];
+} {
+  const conditionalEntries: [string, ToolcraftControlSchema][] = [];
+  const mergeableEntries: [string, ToolcraftControlSchema][] = [];
+
+  for (const entry of entries) {
+    if (hasPanelActionVisibilityGate(entry[1])) {
+      conditionalEntries.push(entry);
+    } else {
+      mergeableEntries.push(entry);
+    }
+  }
+
+  return { conditionalEntries, mergeableEntries };
+}
+
+function appendConditionalFooterActionSection(
+  stickyFooterSections: ToolcraftControlSectionSchema[],
+  entries: readonly [string, ToolcraftControlSchema][],
+): void {
+  if (!hasControlEntries(entries)) {
+    return;
+  }
+
+  stickyFooterSections.unshift({
+    actionGroup: "secondary",
+    controls: createControlsRecord(entries),
+    layout: "standalone",
+    title: "Export",
+  });
+}
+
 function splitControlsPanelActionSections(
   sections: readonly ToolcraftControlSectionSchema[],
 ): {
@@ -827,7 +867,11 @@ function splitControlsPanelActionSections(
       const actionEntries = entries.filter(([, control]) => isPanelActionsControl(control));
       const passthroughEntries = entries.filter(([, control]) => !isPanelActionsControl(control));
 
-      stickyFooterActionEntries.push(...actionEntries);
+      const { conditionalEntries, mergeableEntries } =
+        partitionPanelActionEntries(actionEntries);
+
+      stickyFooterActionEntries.push(...mergeableEntries);
+      appendConditionalFooterActionSection(stickyFooterSections, conditionalEntries);
 
       if (hasControlEntries(passthroughEntries)) {
         stickyFooterSections.push({
@@ -866,7 +910,11 @@ function splitControlsPanelActionSections(
     }
 
     if (hasControlEntries(actionEntries)) {
-      stickyFooterActionEntries.push(...actionEntries);
+      const { conditionalEntries, mergeableEntries } =
+        partitionPanelActionEntries(actionEntries);
+
+      stickyFooterActionEntries.push(...mergeableEntries);
+      appendConditionalFooterActionSection(stickyFooterSections, conditionalEntries);
     }
   }
 
