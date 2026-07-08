@@ -4,6 +4,7 @@
  * word stays readable while the texture follows the current.
  */
 
+import { colorForInk, type ColorSettings } from "./word-brand-colors";
 import type { VectorField } from "./flow-vector-field";
 import { computeWordInk, opacityForInk, sparsitySkipsWord } from "./word-ink";
 import type {
@@ -21,9 +22,10 @@ import {
   parseTokens,
   type WordOrder,
 } from "./word-tokens";
-import { weightForInk, type ResolvedTypography } from "./word-font";
+import type { ResolvedTypography } from "./word-font";
 
 export type WordFlowSettings = {
+  colors: ColorSettings;
   /** 0..100 streamline packing density. */
   density: number;
   highlight: HighlightSettings;
@@ -99,7 +101,7 @@ export function layoutWordFlow(
         settings.ink,
         noiseInk,
       );
-      const weight = weightForInk(typography, probeInk, settings.ink.weightRange / 100);
+      const weight = typography.weight;
       const width = measure(text, weight);
 
       if (cursor + width > totalLength) {
@@ -147,6 +149,7 @@ export function layoutWordFlow(
 
       words.push({
         angle,
+        color: colorForInk(settings.colors, inkValue),
         fontWeight: weight,
         highlighted,
         opacity: opacityForInk(inkValue, settings.ink) * maskAlpha * typography.opacity,

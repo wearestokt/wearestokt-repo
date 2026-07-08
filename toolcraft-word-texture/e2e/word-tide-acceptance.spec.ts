@@ -223,7 +223,7 @@ test("browser: contrast changes product output", async ({ page }) => {
   await page.goto("/");
   await uploadSourceImage(page);
   await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Contrast", 80);
+    await setToolcraftSliderValue(page, "Source levels", 80);
   }, productObservable);
 });
 
@@ -245,11 +245,11 @@ test("browser: fade maps ink to opacity", async ({ page }) => {
   }, productObservable);
 });
 
-test("browser: weight range ramps font weights", async ({ page }) => {
+test("browser: color count maps ink to palette", async ({ page }) => {
   await page.goto("/");
   await uploadSourceImage(page);
   await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Weight range", 100);
+    await setToolcraftSliderValue(page, "Color count", 4);
   }, productObservable);
 });
 
@@ -336,11 +336,39 @@ test("browser: grid gap changes word packing", async ({ page }) => {
   }, productObservable);
 });
 
+test("browser: overlap packs dark ink words", async ({ page }) => {
+  await page.goto("/");
+  await switchToDitherMode(page);
+  await uploadSourceImage(page);
+  await expectToolcraftProductObservableToChange(page, async () => {
+    const field = await getSectionFieldByLabel(page, "Word Grid", "Overlap");
+    await field.getByRole("switch").click();
+  }, productObservable);
+});
+
 test("browser: grid jitter offsets slots", async ({ page }) => {
   await page.goto("/");
   await switchToDitherMode(page);
   await expectToolcraftProductObservableToChange(page, async () => {
     await setToolcraftSliderValue(page, "Jitter", 80);
+  }, productObservable);
+});
+
+test("browser: tone spacing tightens zones", async ({ page }) => {
+  await page.goto("/");
+  await switchToDitherMode(page);
+  await uploadSourceImage(page);
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Tone spacing", -80);
+  }, productObservable);
+});
+
+test("browser: spacing range changes tone gap strength", async ({ page }) => {
+  await page.goto("/");
+  await switchToDitherMode(page);
+  await uploadSourceImage(page);
+  await expectToolcraftProductObservableToChange(page, async () => {
+    await setToolcraftSliderValue(page, "Spacing range", 100);
   }, productObservable);
 });
 
@@ -434,86 +462,22 @@ test("browser: word gap changes stream spacing", async ({ page }) => {
   }, productObservable);
 });
 
-test("browser: font picker styles every word", async ({ page }) => {
-  test.setTimeout(90_000);
+test("browser: font size styles every word", async ({ page }) => {
   await page.goto("/");
-
-  const coveredParts = [
-    "fontPicker.fontId",
-    "fontPicker.fontWeight",
-    "fontPicker.fontSize",
-    "fontPicker.letterSpacing",
-    "fontPicker.lineHeight",
-    "fontPicker.textCase",
-    "fontPicker.color",
-    "fontPicker.opacity",
-  ] as const;
-  expect(coveredParts.length).toBe(8);
-
-  // fontPicker.fontSize
   await expectToolcraftProductObservableToChange(page, async () => {
-    const sizeInput = page.getByRole("textbox", { name: "Font size" });
-    await sizeInput.fill("26");
-    await sizeInput.press("Enter");
+    await setToolcraftSliderValue(page, "Font size", 28);
   }, productObservable);
+});
 
-  // fontPicker.fontWeight
+test("browser: palette colors repaint words", async ({ page }) => {
+  await page.goto("/");
+  await setToolcraftSliderValue(page, "Color count", 4);
   await expectToolcraftProductObservableToChange(page, async () => {
-    await page.getByRole("combobox", { name: "Font weight" }).click();
-    await page
-      .locator('[data-slot="select-content"] [role="option"]')
-      .filter({ hasText: /^700$/ })
-      .first()
-      .click();
-  }, productObservable);
-
-  // fontPicker.textCase
-  await expectToolcraftProductObservableToChange(page, async () => {
-    await page.getByRole("combobox", { name: "Text case" }).click();
-    await page
-      .locator('[data-slot="select-content"] [role="option"]')
-      .filter({ hasText: /lower/i })
-      .first()
-      .click();
-  }, productObservable);
-
-  // fontPicker.color and fontPicker.opacity
-  await expectToolcraftProductObservableToChange(page, async () => {
-    const typographySection = await getSection(page, "Typography");
-    const hexInput = typographySection.getByRole("textbox", { name: /Color hex/i });
-    await hexInput.fill("#0A6E8A");
+    const colorsSection = await getSection(page, "Brand Palette");
+    const hexInput = colorsSection.getByRole("textbox", { name: /hex/i }).first();
+    await hexInput.fill("#FF0044");
     await hexInput.press("Enter");
   }, productObservable);
-
-  await expectToolcraftProductObservableToChange(page, async () => {
-    const typographySection = await getSection(page, "Typography");
-    const opacityInput = typographySection.getByRole("textbox", { name: /Color opacity/i });
-    await opacityInput.fill("60");
-    await opacityInput.press("Enter");
-  }, productObservable);
-
-  // fontPicker.fontId plus fontPicker.letterSpacing and fontPicker.lineHeight
-  // live inside the family popover.
-  await page.getByRole("button", { name: "Select Font" }).click();
-  const searchInput = page.getByPlaceholder("Find font");
-  await expect(searchInput).toBeVisible();
-  await searchInput.fill("Space Mono");
-  await page.getByText("Space Mono", { exact: true }).first().click();
-
-  await expectToolcraftProductObservableToChange(page, async () => {
-    const spacingSlider = page.getByRole("slider", { name: "Letter spacing" });
-    await spacingSlider.focus();
-    await page.keyboard.press("ArrowRight");
-    await page.keyboard.press("ArrowRight");
-  }, productObservable);
-
-  await expectToolcraftProductObservableToChange(page, async () => {
-    const lineHeightSlider = page.getByRole("slider", { name: "Line height" });
-    await lineHeightSlider.focus();
-    await page.keyboard.press("ArrowLeft");
-  }, productObservable);
-
-  await page.keyboard.press("Escape");
 });
 
 test("browser: highlight words mark matches", async ({ page }) => {

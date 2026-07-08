@@ -52,14 +52,42 @@ export function luminanceOverRect(
   return count > 0 ? sum / count : 0.5;
 }
 
+/**
+ * After Effects-style input levels: crush shadows/highlights and steepen
+ * midtones. `contrast` -100..100; 0 leaves luminance unchanged.
+ */
+export function applySourceLevels(luminance: number, contrast: number): number {
+  const clamped = Math.min(1, Math.max(0, luminance));
+  const amount = Math.max(-1, Math.min(1, contrast / 100));
+
+  if (amount === 0) {
+    return clamped;
+  }
+
+  if (amount > 0) {
+    const crush = amount * (0.22 + amount * 0.33);
+    const inputBlack = crush * 0.5;
+    const inputWhite = 1 - crush * 0.5;
+    const span = inputWhite - inputBlack;
+    let value = span > 0.001 ? (clamped - inputBlack) / span : 0.5;
+    value = Math.min(1, Math.max(0, value));
+    const gamma = 1 / (1 + amount * 2.75);
+    return Math.pow(value, gamma);
+  }
+
+  const lift = -amount;
+  const gamma = 1 + lift * 1.15;
+  let value = Math.pow(clamped, gamma);
+  value = value * (1 - lift * 0.75) + 0.5 * lift * 0.75;
+  return Math.min(1, Math.max(0, value));
+}
+
 export function applyToneCurve(
   luminance: number,
   contrast: number,
   invert: boolean,
 ): number {
-  const contrastFactor = (contrast + 100) / 100;
-  let value = (luminance - 0.5) * contrastFactor + 0.5;
-  value = Math.min(1, Math.max(0, value));
+  let value = applySourceLevels(luminance, contrast);
   if (invert) {
     value = 1 - value;
   }

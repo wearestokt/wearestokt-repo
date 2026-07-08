@@ -5,6 +5,7 @@
 
 import type { InkSettings } from "./word-layout-types";
 import {
+  applySourceLevels,
   inkFromLuminance,
   luminanceOverRect,
   type PreparedSourceImage,
@@ -42,11 +43,13 @@ export function zoneLuminance(
   width: number,
   height: number,
   canvasHeight: number,
+  contrast = 0,
 ): number {
   if (!image) {
-    return 1 - Math.min(1, Math.max(0, y / Math.max(1, canvasHeight)));
+    const raw = 1 - Math.min(1, Math.max(0, y / Math.max(1, canvasHeight)));
+    return applySourceLevels(raw, contrast);
   }
-  return luminanceOverRect(image, x, y, width, height);
+  return applySourceLevels(luminanceOverRect(image, x, y, width, height), contrast);
 }
 
 /**

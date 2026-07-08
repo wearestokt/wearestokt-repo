@@ -1,9 +1,11 @@
 /**
  * Dither mode: words fill a line grid across the canvas; an optional source
- * image drives per-slot ink (opacity, weight, dropout) and tone zones.
+ * image drives per-slot ink (opacity, dropout), tone zones, and luminance spacing.
  */
 
+import { colorForInk, type ColorSettings } from "./word-brand-colors";
 import { computeWordInk, opacityForInk, sparsitySkipsWord, zoneLuminance } from "./word-ink";
+import { horizontalWordAdvance, luminanceGapMultiplier, verticalRowAdvance } from "./word-spacing";
 import type {
   HighlightSettings,
   InkSettings,
@@ -21,17 +23,24 @@ import {
   type TokenStream,
   type WordOrder,
 } from "./word-tokens";
-import { weightForInk, type ResolvedTypography } from "./word-font";
+import type { ResolvedTypography } from "./word-font";
 
 export type WordGridSettings = {
-  /** Extra px between words and rows. */
+  colors: ColorSettings;
+  /** Literal px between words and rows; 0 means no extra spacing beyond the font box. */
   gap: number;
   highlight: HighlightSettings;
   ink: InkSettings;
   /** 0..100 positional jitter. */
   jitter: number;
+  /** Pack words over each other in very dark ink areas. */
+  overlap: boolean;
   order: WordOrder;
   seed: number;
+  /** -100..100: darker zones tighter left, lighter zones tighter right. */
+  spacingBias: number;
+  /** 0..100 spacing bias strength. */
+  spacingRange: number;
   words: string;
   zones: ToneZoneSettings;
 };
@@ -59,22 +68,37 @@ export function layoutWordGrid(
   );
 
   const fontSize = typography.fontSize;
-  const rowHeight = fontSize * typography.lineHeightFactor + settings.gap;
-  const wordGap = fontSize * 0.55 + settings.gap;
   const pad = fontSize * 0.75;
-  const jitterAmp = (settings.jitter / 100) * rowHeight * 0.45;
-  const baselineDrop = fontSize * 0.8;
 
   const words: PlacedWord[] = [];
   let slotIndex = 0;
 
-  for (let rowTop = pad, row = 0; rowTop + rowHeight <= canvasHeight - pad; rowTop += rowHeight, row += 1) {
+  for (let rowTop = pad; rowTop + fontSize <= canvasHeight - pad; ) {
+    const rowLuminance = zoneLuminance(
+      image,
+      pad,
+      rowTop,
+      canvasWidth - pad * 2,
+      fontSize,
+      canvasHeight,
+      settings.ink.contrast,
+    );
+    const rowGapMultiplier = luminanceGapMultiplier(
+      rowLuminance,
+      settings.spacingBias,
+      settings.spacingRange,
+    );
+    const rowHeight = verticalRowAdvance(fontSize, settings.gap, rowGapMultiplier);
+    const jitterAmp = (settings.jitter / 100) * rowHeight * 0.45;
+
     let x = pad;
 
     while (x < canvasWidth - pad) {
       slotIndex += 1;
-      const jitterX = jitterAmp > 0 ? (hashUint(slotIndex, 7, settings.seed) - 0.5) * 2 * jitterAmp : 0;
-      const jitterY = jitterAmp > 0 ? (hashUint(slotIndex, 11, settings.seed) - 0.5) * 2 * jitterAmp : 0;
+      const jitterX =
+        jitterAmp > 0 ? (hashUint(slotIndex, 7, settings.seed) - 0.5) * 2 * jitterAmp : 0;
+      const jitterY =
+        jitterAmp > 0 ? (hashUint(slotIndex, 11, settings.seed) - 0.5) * 2 * jitterAmp : 0;
 
       const stream = pickZoneStream(
         zoneStreams,
@@ -85,6 +109,7 @@ export function layoutWordGrid(
         fontSize,
         rowHeight,
         canvasHeight,
+        settings.ink.contrast,
       );
       const text = stream.next();
       if (text.length === 0) {
@@ -101,17 +126,14 @@ export function layoutWordGrid(
         settings.ink,
         noiseInk,
       );
-      const weight = weightForInk(typography, inkValue, settings.ink.weightRange / 100);
-      const width = measure(text, weight);
+      const width = measure(text, typography.weight);
 
       if (x + width > canvasWidth - pad) {
         break;
       }
 
       const wordX = x + jitterX;
-      const wordY = rowTop + baselineDrop + jitterY;
-      const advance = width + wordGap;
-
+      const wordY = rowTop + fontSize + jitterY;
       const preciseInk = computeWordInk(
         image,
         wordX,
@@ -122,6 +144,16 @@ export function layoutWordGrid(
         noiseInk,
       );
       const skipRoll = hashUint(slotIndex, 13, settings.seed);
+      const luminance = zoneLuminance(
+        image,
+        wordX,
+        rowTop + jitterY,
+        width,
+        rowHeight,
+        canvasHeight,
+        settings.ink.contrast,
+      );
+      const advance = slotAdvance(width, preciseInk, luminance, settings);
 
       if (sparsitySkipsWord(preciseInk, settings.ink.sparsity, skipRoll)) {
         x += advance;
@@ -140,7 +172,8 @@ export function layoutWordGrid(
 
       words.push({
         angle: 0,
-        fontWeight: weightForInk(typography, preciseInk, settings.ink.weightRange / 100),
+        color: colorForInk(settings.colors, preciseInk),
+        fontWeight: typography.weight,
         highlighted,
         opacity: opacityForInk(preciseInk, settings.ink) * maskAlpha * typography.opacity,
         text,
@@ -151,9 +184,25 @@ export function layoutWordGrid(
 
       x += advance;
     }
+
+    rowTop += rowHeight;
   }
 
   return words;
+}
+
+function slotAdvance(
+  width: number,
+  ink: number,
+  luminance: number,
+  settings: WordGridSettings,
+): number {
+  const gapMultiplier = luminanceGapMultiplier(
+    luminance,
+    settings.spacingBias,
+    settings.spacingRange,
+  );
+  return horizontalWordAdvance(width, settings.gap, gapMultiplier, ink, settings.overlap);
 }
 
 type ZoneStreams = {
@@ -192,12 +241,13 @@ function pickZoneStream(
   probeWidth: number,
   probeHeight: number,
   canvasHeight: number,
+  contrast: number,
 ): TokenStream {
   if (!zones.enabled) {
     return streams.main;
   }
 
-  const luminance = zoneLuminance(image, x, y, probeWidth, probeHeight, canvasHeight);
+  const luminance = zoneLuminance(image, x, y, probeWidth, probeHeight, canvasHeight, contrast);
   const low = Math.min(zones.split[0], zones.split[1]) / 100;
   const high = Math.max(zones.split[0], zones.split[1]) / 100;
 

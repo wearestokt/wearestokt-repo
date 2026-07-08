@@ -88,17 +88,13 @@ export function buildWordTideSvg(options: WordTideSvgOptions): string {
   const spacingAttribute =
     letterSpacingPx !== 0 ? ` letter-spacing="${round2(letterSpacingPx)}"` : "";
 
-  lines.push(
-    `<g font-family='${escapeXml(typography.family)}' font-size="${typography.fontSize}" fill="${typography.color}"${spacingAttribute}>`,
-  );
-
   for (const word of words) {
     lines.push(
-      `<text transform="${wordTransform(word)}" font-weight="${word.fontWeight}" opacity="${round2(word.opacity)}">${escapeXml(word.text)}</text>`,
+      `<text transform="${wordTransform(word)}" font-family='${escapeXml(typography.family)}' font-size="${typography.fontSize}" font-weight="${word.fontWeight}" fill="${escapeXml(word.color)}" opacity="${round2(word.opacity)}"${spacingAttribute}>${escapeXml(word.text)}</text>`,
     );
   }
 
-  lines.push("</g>", "</svg>");
+  lines.push("</svg>");
   return lines.join("\n");
 }
 
@@ -219,7 +215,6 @@ export async function buildWordTideSvgOutlined(options: WordTideSvgOptions): Pro
   }
 
   lines.push(...buildHighlightRects(words, typography, highlightColor));
-  lines.push(`<g fill="${typography.color}">`);
 
   const pathDataCache = new Map<string, string | null>();
   let fallbackTextCount = 0;
@@ -240,17 +235,16 @@ export async function buildWordTideSvgOutlined(options: WordTideSvgOptions): Pro
 
     if (pathData) {
       lines.push(
-        `<path d="${pathData}" opacity="${round2(word.opacity)}" transform="${wordTransform(word)}"/>`,
+        `<path d="${pathData}" fill="${escapeXml(word.color)}" opacity="${round2(word.opacity)}" transform="${wordTransform(word)}"/>`,
       );
     } else {
       fallbackTextCount += 1;
       lines.push(
-        `<text transform="${wordTransform(word)}" font-family='${escapeXml(typography.family)}' font-size="${typography.fontSize}" font-weight="${word.fontWeight}" opacity="${round2(word.opacity)}">${escapeXml(word.text)}</text>`,
+        `<text transform="${wordTransform(word)}" font-family='${escapeXml(typography.family)}' font-size="${typography.fontSize}" font-weight="${word.fontWeight}" fill="${escapeXml(word.color)}" opacity="${round2(word.opacity)}">${escapeXml(word.text)}</text>`,
       );
     }
   }
 
-  lines.push("</g>");
   if (fallbackTextCount > 0) {
     lines.push(
       `<!-- ${fallbackTextCount} word(s) kept as editable text: no local font binary for "${escapeXml(family)}". Add TTF/OTF files to public/fonts and register them in src/app/brand-fonts.ts. -->`,

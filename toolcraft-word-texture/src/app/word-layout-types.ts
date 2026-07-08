@@ -1,6 +1,7 @@
 export type PlacedWord = {
   /** Rotation in radians around the (x, y) anchor. 0 in grid mode. */
   angle: number;
+  color: string;
   fontWeight: number;
   highlighted: boolean;
   /** Final alpha 0..1 (ink fade x mask edge x base opacity). */
@@ -25,8 +26,6 @@ export type InkSettings = {
   invert: boolean;
   /** 0..100: how strongly light areas drop words entirely. */
   sparsity: number;
-  /** 0..100: how far the tone->weight ramp may travel below the picked weight. */
-  weightRange: number;
 };
 
 export type ToneZoneSettings = {

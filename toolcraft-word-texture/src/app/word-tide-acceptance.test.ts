@@ -18,7 +18,10 @@ import type {
 } from "./word-layout-types";
 import { buildShapeMask, type ShapeMask } from "./word-mask";
 import type { PreparedSourceImage } from "./word-source-sample";
+import { applySourceLevels, inkFromLuminance } from "./word-source-sample";
+import { buildSourceImageCacheKey } from "./word-source-raster";
 import { applyTextCase } from "./word-tokens";
+import { DEFAULT_COLOR_SETTINGS } from "./word-brand-colors";
 import { resolveTypography, type ResolvedTypography } from "./word-font";
 import {
   buildWordTideSvg,
@@ -32,24 +35,13 @@ const CANVAS_HEIGHT = 540;
 const DEFAULT_WORDS =
   "OCEAN TIDE CURRENT HARBOR DOCK CARGO SWELL DRIFT NORTH ANCHOR VESSEL PORT";
 
-const typography: ResolvedTypography = {
-  color: "#16324F",
-  family: '"IBM Plex Mono", ui-monospace, monospace',
-  fontSize: 18,
-  letterSpacingEm: 0,
-  lineHeightFactor: 1.5,
-  opacity: 1,
-  textCase: "uppercase",
-  weight: 500,
-  weights: [100, 200, 300, 400, 500, 600, 700],
-};
+const typography: ResolvedTypography = resolveTypography(18);
 
 const baseInk: InkSettings = {
   contrast: 0,
   fade: true,
   invert: false,
   sparsity: 0,
-  weightRange: 60,
 };
 
 const baseZones: ToneZoneSettings = {
@@ -65,17 +57,22 @@ const baseHighlight: HighlightSettings = { coverage: 0, words: "" };
 const measure: MeasureWord = (text, weight) => text.length * (9 + weight / 300);
 
 const baseGrid: WordGridSettings = {
+  colors: DEFAULT_COLOR_SETTINGS,
   gap: 6,
   highlight: baseHighlight,
   ink: baseInk,
   jitter: 0,
+  overlap: false,
   order: "sequential",
   seed: 21,
+  spacingBias: 0,
+  spacingRange: 50,
   words: DEFAULT_WORDS,
   zones: baseZones,
 };
 
 const baseFlow: WordFlowSettings = {
+  colors: DEFAULT_COLOR_SETTINGS,
   density: 55,
   highlight: baseHighlight,
   ink: baseInk,
@@ -151,7 +148,7 @@ function hashWords(words: readonly PlacedWord[]): string {
   return words
     .map(
       (word) =>
-        `${word.text}:${Math.round(word.x)}:${Math.round(word.y)}:${word.fontWeight}:${Math.round(word.opacity * 1000)}:${word.highlighted ? 1 : 0}`,
+        `${word.text}:${Math.round(word.x)}:${Math.round(word.y)}:${word.color}:${word.fontWeight}:${Math.round(word.opacity * 1000)}:${word.highlighted ? 1 : 0}`,
     )
     .join("|");
 }
@@ -191,9 +188,9 @@ function buildSvgOptions(
   overrides: Partial<WordTideSvgOptions> = {},
 ): WordTideSvgOptions {
   return {
-    backgroundHex: "#F5F2EC",
+    backgroundHex: "#F8F1E8",
     height: CANVAS_HEIGHT,
-    highlightColor: "#FFE14D",
+    highlightColor: "#8BE5FF",
     includeBackground: true,
     layout: {
       canvasHeight: CANVAS_HEIGHT,
@@ -254,8 +251,20 @@ describe("Word Tide control acceptance", () => {
   it("contrast changes product output", () => {
     const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
     expect(
-      hashWords(gridWords({ ink: { ...baseInk, contrast: 80 } }, image)),
-    ).not.toBe(hashWords(gridWords({ ink: { ...baseInk, contrast: -80 } }, image)));
+      hashWords(gridWords({ ink: { ...baseInk, contrast: 100 } }, image)),
+    ).not.toBe(hashWords(gridWords({ ink: { ...baseInk, contrast: -100 } }, image)));
+  });
+
+  it("source levels crush separates tones aggressively", () => {
+    const neutral = inkFromLuminance(0.5, 0, false);
+    const crushedDark = inkFromLuminance(0.2, 100, false);
+    const crushedLight = inkFromLuminance(0.8, 100, false);
+    expect(crushedDark).toBeGreaterThan(neutral + 0.35);
+    expect(crushedLight).toBeLessThan(neutral - 0.35);
+    expect(applySourceLevels(0.5, 100)).toBeGreaterThan(0.72);
+    const flatSpread =
+      applySourceLevels(0.85, -100) - applySourceLevels(0.15, -100);
+    expect(flatSpread).toBeLessThan(0.85 - 0.15);
   });
 
   it("invert flips ink reading", () => {
@@ -275,12 +284,12 @@ describe("Word Tide control acceptance", () => {
     expect(flat.every((word) => word.opacity === 1)).toBe(true);
   });
 
-  it("weight range ramps font weights", () => {
+  it("color count maps ink to palette slots", () => {
     const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
-    const ramped = gridWords({ ink: { ...baseInk, weightRange: 100 } }, image);
-    const fixed = gridWords({ ink: { ...baseInk, weightRange: 0 } }, image);
-    expect(new Set(ramped.map((word) => word.fontWeight)).size).toBeGreaterThan(1);
-    expect(new Set(fixed.map((word) => word.fontWeight)).size).toBe(1);
+    const single = gridWords({ colors: { ...DEFAULT_COLOR_SETTINGS, count: 1 } }, image);
+    const multi = gridWords({ colors: { ...DEFAULT_COLOR_SETTINGS, count: 4 } }, image);
+    expect(new Set(single.map((word) => word.color)).size).toBe(1);
+    expect(new Set(multi.map((word) => word.color)).size).toBeGreaterThan(1);
   });
 
   it("sparsity drops words from light areas", () => {
@@ -326,10 +335,55 @@ describe("Word Tide control acceptance", () => {
     expect(new Set(zoned.map((word) => word.text)).has("GULL")).toBe(true);
   });
 
+  it("tone spacing tightens zones", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const uniform = gridWords({ gap: 0, spacingBias: 0 }, image);
+    const darkTight = gridWords({ gap: 0, spacingBias: -100, spacingRange: 100 }, image);
+    const lightTight = gridWords({ gap: 0, spacingBias: 100, spacingRange: 100 }, image);
+    expect(hashWords(darkTight)).not.toBe(hashWords(uniform));
+    expect(hashWords(lightTight)).not.toBe(hashWords(uniform));
+    expect(darkTight.length).toBeGreaterThan(uniform.length);
+  });
+
+  it("spacing range changes tone gap strength", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const weak = gridWords({ spacingBias: -80, spacingRange: 10 }, image);
+    const strong = gridWords({ spacingBias: -80, spacingRange: 100 }, image);
+    expect(hashWords(strong)).not.toBe(hashWords(weak));
+  });
+
   it("grid gap changes word packing", () => {
     const tight = gridWords({ gap: 0 });
     const loose = gridWords({ gap: 40 });
     expect(tight.length).toBeGreaterThan(loose.length);
+  });
+
+  it("zero gap packs words without extra horizontal spacing", () => {
+    const words = gridWords({ gap: 0, jitter: 0 });
+    const rowWords = words
+      .slice()
+      .sort((a, b) => a.y - b.y || a.x - b.x)
+      .filter((word, index, list) => {
+        if (index === 0) {
+          return true;
+        }
+        return Math.abs(word.y - list[index - 1]!.y) < 1;
+      });
+    const gaps: number[] = [];
+    for (let index = 1; index < rowWords.length; index += 1) {
+      const previous = rowWords[index - 1]!;
+      const current = rowWords[index]!;
+      gaps.push(current.x - (previous.x + previous.width));
+    }
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(Math.max(...gaps)).toBeLessThanOrEqual(0.5);
+  });
+
+  it("overlap packs words tighter in dark ink", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const flat = gridWords({ gap: 6, overlap: false }, image);
+    const overlapped = gridWords({ gap: 6, overlap: true }, image);
+    expect(overlapped.length).toBeGreaterThan(flat.length);
   });
 
   it("grid jitter offsets slots", () => {
@@ -400,37 +454,89 @@ describe("Word Tide control acceptance", () => {
     expect(tight.length).toBeGreaterThan(loose.length);
   });
 
-  it("font picker styles every word", () => {
-    const resolved = resolveTypography({
-      color: "#0A2540",
-      fontId: "ibm-plex-mono",
-      fontSize: 24,
-      fontWeight: "700",
-      letterSpacing: "wide",
-      lineHeight: "tight",
-      opacity: 50,
-      textCase: "lowercase",
-    });
-    expect(resolved.family.toLowerCase()).toContain("mono");
-    expect(resolved.weight).toBe(700);
+  it("font size styles every word", () => {
+    const resolved = resolveTypography(24);
+    expect(resolved.family.toLowerCase()).toContain("big bird");
+    expect(resolved.weight).toBe(400);
     expect(resolved.fontSize).toBe(24);
-    expect(resolved.letterSpacingEm).toBeGreaterThan(0);
-    expect(resolved.lineHeightFactor).toBe(1.25);
-    expect(resolved.textCase).toBe("lowercase");
-    expect(applyTextCase("OCEAN", resolved.textCase)).toBe("ocean");
-    expect(resolved.color).toBe("#0A2540");
-    expect(resolved.opacity).toBe(0.5);
+    expect(resolved.textCase).toBe("uppercase");
+    expect(applyTextCase("ocean", resolved.textCase)).toBe("OCEAN");
 
     const larger = layoutWordGrid(
       CANVAS_WIDTH,
       CANVAS_HEIGHT,
-      { ...typography, fontSize: 34 },
+      resolveTypography(34),
       baseGrid,
       null,
       null,
       measure,
     );
     expect(larger.length).toBeLessThan(gridWords().length);
+  });
+
+  it("palette colors repaint words", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const baseline = gridWords(
+      { colors: { ...DEFAULT_COLOR_SETTINGS, count: 4 } },
+      image,
+    );
+    const repainted = gridWords(
+      {
+        colors: {
+          ...DEFAULT_COLOR_SETTINGS,
+          color1: "#FF0044",
+          count: 4,
+        },
+      },
+      image,
+    );
+    expect(new Set(repainted.map((word) => word.color)).has("#FF0044")).toBe(true);
+    expect(hashWords(repainted)).not.toBe(hashWords(baseline));
+  });
+
+  it("dark slate color repaints words", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const words = gridWords(
+      {
+        colors: {
+          ...DEFAULT_COLOR_SETTINGS,
+          color2: "#AA00BB",
+          count: 2,
+        },
+      },
+      image,
+    );
+    expect(new Set(words.map((word) => word.color)).has("#AA00BB")).toBe(true);
+  });
+
+  it("capri color repaints words", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const words = gridWords(
+      {
+        colors: {
+          ...DEFAULT_COLOR_SETTINGS,
+          color3: "#22CC88",
+          count: 3,
+        },
+      },
+      image,
+    );
+    expect(new Set(words.map((word) => word.color)).has("#22CC88")).toBe(true);
+  });
+
+  it("sky blue color repaints words", () => {
+    const image = createHorizontalGradientImage(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const words = gridWords(
+      {
+        colors: {
+          ...DEFAULT_COLOR_SETTINGS,
+          color4: "#EE5500",
+          count: 4,
+        },
+      },
+      image,
+    );
+    expect(new Set(words.map((word) => word.color)).has("#EE5500")).toBe(true);
   });
 
   it("highlight words mark matches", () => {
@@ -489,8 +595,8 @@ describe("Word Tide control acceptance", () => {
     const words = gridWords().slice(0, 20);
     const withBackground = buildWordTideSvg(buildSvgOptions(words));
     const transparent = buildWordTideSvg(buildSvgOptions(words, { includeBackground: false }));
-    expect(withBackground).toContain('fill="#F5F2EC"');
-    expect(transparent).not.toContain('fill="#F5F2EC"');
+    expect(withBackground).toContain('fill="#F8F1E8"');
+    expect(transparent).not.toContain('fill="#F8F1E8"');
   });
 
   it("background color changes product output", () => {
@@ -525,6 +631,29 @@ describe("Word Tide control acceptance", () => {
     const hasOutlines = outlined.includes('<path d="M');
     const hasDocumentedFallback = outlined.includes("kept as editable text");
     expect(hasOutlines || hasDocumentedFallback).toBe(true);
+  });
+});
+
+describe("Word Tide source image cache", () => {
+  it("changes cache key when source bytes change but media id stays the same", () => {
+    const asset = {
+      dataUrl: "data:image/png;base64,AAAA",
+      fileName: "a.png",
+      id: "media-1",
+      layerId: "layer-1",
+      mimeType: "image/png",
+      position: { x: 0, y: 0 },
+      sourceTarget: "media.sourceImage",
+    };
+    const replaced = {
+      ...asset,
+      dataUrl: "data:image/png;base64,BBBB",
+      fileName: "b.png",
+    };
+
+    expect(buildSourceImageCacheKey(asset, 1920, 1080)).not.toBe(
+      buildSourceImageCacheKey(replaced, 1920, 1080),
+    );
   });
 });
 

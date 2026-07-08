@@ -5,14 +5,13 @@ import * as React from "react";
 import { shouldIncludeToolcraftPreviewBackground } from "@/toolcraft/runtime";
 import type { ToolcraftState } from "@/toolcraft/runtime";
 import { useToolcraft } from "@/toolcraft/runtime/react";
-import {
-  getFontPickerFontById,
-  type FontPickerValue,
-} from "@/toolcraft/ui/components/controls/font-picker";
-import { ensureFontPickerPreviewLoaded } from "@/toolcraft/ui/components/controls/font-picker/font-preview-loader";
 
 import { createVectorField, type FlowFieldPattern } from "./flow-vector-field";
 import type { FlowPath } from "./flow-path-math";
+import {
+  DEFAULT_COLOR_SETTINGS,
+  type ColorSettings,
+} from "./word-brand-colors";
 import {
   buildCanvasFont,
   ensureBrandFontsLoaded,
@@ -30,8 +29,9 @@ import {
 } from "./word-source-raster";
 import type { PreparedSourceImage } from "./word-source-sample";
 
-const defaultBackgroundHex = "#F5F2EC";
-const defaultHighlightHex = "#FFE14D";
+const defaultBackgroundHex = "#F8F1E8";
+const defaultHighlightHex = "#8BE5FF";
+const defaultFontSize = 18;
 
 function asNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -64,33 +64,18 @@ function asHex(value: unknown, fallback: string): string {
   return fallback;
 }
 
-const defaultFontValue: FontPickerValue = {
-  color: "#16324F",
-  fontId: "ibm-plex-mono",
-  fontSize: 18,
-  fontWeight: "500",
-  letterSpacing: "normal",
-  lineHeight: "normal",
-  opacity: 100,
-  textCase: "uppercase",
-};
+export function readFontSize(state: ToolcraftState): number {
+  return asNumber(state.values["type.fontSize"], defaultFontSize);
+}
 
-export function readFontValue(state: ToolcraftState): FontPickerValue {
-  const raw = state.values["type.font"];
-  if (!raw || typeof raw !== "object") {
-    return defaultFontValue;
-  }
-  const value = raw as Partial<FontPickerValue>;
+export function readColorSettings(state: ToolcraftState): ColorSettings {
+  const values = state.values;
   return {
-    color: typeof value.color === "string" ? value.color : defaultFontValue.color,
-    fontId: typeof value.fontId === "string" ? value.fontId : defaultFontValue.fontId,
-    fontSize: asNumber(value.fontSize, defaultFontValue.fontSize),
-    fontWeight:
-      typeof value.fontWeight === "string" ? value.fontWeight : defaultFontValue.fontWeight,
-    letterSpacing: (value.letterSpacing ?? defaultFontValue.letterSpacing) as FontPickerValue["letterSpacing"],
-    lineHeight: (value.lineHeight ?? defaultFontValue.lineHeight) as FontPickerValue["lineHeight"],
-    opacity: asNumber(value.opacity, defaultFontValue.opacity),
-    textCase: (value.textCase ?? defaultFontValue.textCase) as FontPickerValue["textCase"],
+    color1: asHex(values["colors.color1"], DEFAULT_COLOR_SETTINGS.color1),
+    color2: asHex(values["colors.color2"], DEFAULT_COLOR_SETTINGS.color2),
+    color3: asHex(values["colors.color3"], DEFAULT_COLOR_SETTINGS.color3),
+    color4: asHex(values["colors.color4"], DEFAULT_COLOR_SETTINGS.color4),
+    count: Math.min(4, Math.max(1, Math.round(asNumber(values["colors.count"], DEFAULT_COLOR_SETTINGS.count)))),
   };
 }
 
@@ -103,6 +88,7 @@ function readPaths(state: ToolcraftState): FlowPath[] {
 }
 
 export type WordTideSettings = {
+  colors: ColorSettings;
   fieldDirection: number;
   fieldFrequency: number;
   fieldPattern: FlowFieldPattern;
@@ -110,8 +96,12 @@ export type WordTideSettings = {
   fieldTurbulence: number;
   flowDensity: number;
   flowWordGap: number;
+  fontSize: number;
   gridGap: number;
   gridJitter: number;
+  gridOverlap: boolean;
+  gridSpacingBias: number;
+  gridSpacingRange: number;
   highlightColor: string;
   highlightCoverage: number;
   highlightWords: string;
@@ -119,7 +109,6 @@ export type WordTideSettings = {
   inkFade: boolean;
   inkInvert: boolean;
   inkSparsity: number;
-  inkWeightRange: number;
   maskFeather: number;
   maskInvert: boolean;
   mode: "dither" | "flow";
@@ -145,6 +134,7 @@ export function readWordTideSettings(state: ToolcraftState): WordTideSettings {
       : [35, 65];
 
   return {
+    colors: readColorSettings(state),
     fieldDirection: asNumber(values["flow.direction"], 200),
     fieldFrequency: asNumber(values["flow.frequency"], 14),
     fieldPattern: asString(
@@ -156,8 +146,12 @@ export function readWordTideSettings(state: ToolcraftState): WordTideSettings {
     fieldTurbulence: asNumber(values["flow.turbulence"], 10),
     flowDensity: asNumber(values["streams.density"], 55),
     flowWordGap: asNumber(values["streams.wordGap"], 6),
+    fontSize: readFontSize(state),
     gridGap: asNumber(values["grid.gap"], 6),
     gridJitter: asNumber(values["grid.jitter"], 0),
+    gridOverlap: asBoolean(values["grid.overlap"], false),
+    gridSpacingBias: asNumber(values["grid.spacingBias"], 0),
+    gridSpacingRange: asNumber(values["grid.spacingRange"], 50),
     highlightColor: asHex(values["highlight.color"], defaultHighlightHex),
     highlightCoverage: asNumber(values["highlight.coverage"], 0),
     highlightWords: asText(values["highlight.words"], ""),
@@ -165,7 +159,6 @@ export function readWordTideSettings(state: ToolcraftState): WordTideSettings {
     inkFade: asBoolean(values["ink.fade"], true),
     inkInvert: asBoolean(values["source.invert"], false),
     inkSparsity: asNumber(values["ink.sparsity"], 0),
-    inkWeightRange: asNumber(values["ink.weightRange"], 60),
     maskFeather: asNumber(values["mask.feather"], 0),
     maskInvert: asBoolean(values["mask.invert"], false),
     mode: asString(values["mode.render"], ["dither", "flow"] as const, "flow"),
@@ -238,7 +231,6 @@ export function buildWordTideLayout(
   canvasWidth: number,
   canvasHeight: number,
   settings: WordTideSettings,
-  font: FontPickerValue,
   image: PreparedSourceImage | null,
   imageKey: string,
   mask: ShapeMask | null,
@@ -248,7 +240,6 @@ export function buildWordTideLayout(
   const cacheKey = JSON.stringify({
     canvasHeight,
     canvasWidth,
-    font,
     fontsVersion,
     imageKey,
     maskKey,
@@ -259,14 +250,13 @@ export function buildWordTideLayout(
     return cached;
   }
 
-  const typography = resolveTypography(font);
+  const typography = resolveTypography(settings.fontSize);
   const measure = createWordMeasurer(typography);
   const ink = {
     contrast: settings.inkContrast,
     fade: settings.inkFade,
     invert: settings.inkInvert,
     sparsity: settings.inkSparsity,
-    weightRange: settings.inkWeightRange,
   };
   const highlight = {
     coverage: settings.highlightCoverage,
@@ -277,12 +267,16 @@ export function buildWordTideLayout(
 
   if (settings.mode === "dither") {
     const gridSettings: WordGridSettings = {
+      colors: settings.colors,
       gap: settings.gridGap,
       highlight,
       ink,
       jitter: settings.gridJitter,
+      overlap: settings.gridOverlap,
       order: settings.order,
       seed: settings.seed,
+      spacingBias: settings.gridSpacingBias,
+      spacingRange: settings.gridSpacingRange,
       words: settings.words,
       zones: {
         darkWords: settings.zonesDark,
@@ -314,6 +308,7 @@ export function buildWordTideLayout(
       },
     );
     const flowSettings: WordFlowSettings = {
+      colors: settings.colors,
       density: settings.flowDensity,
       highlight,
       ink,
@@ -377,19 +372,22 @@ export function drawWordTide(
     context.restore();
   }
 
-  const byWeight = new Map<number, PlacedWord[]>();
+  const byStyle = new Map<string, PlacedWord[]>();
   for (const word of words) {
-    const bucket = byWeight.get(word.fontWeight);
+    const key = `${word.color}:${word.fontWeight}`;
+    const bucket = byStyle.get(key);
     if (bucket) {
       bucket.push(word);
     } else {
-      byWeight.set(word.fontWeight, [word]);
+      byStyle.set(key, [word]);
     }
   }
 
-  context.fillStyle = typography.color;
   context.textBaseline = "alphabetic";
-  for (const [weight, bucket] of byWeight) {
+  for (const [key, bucket] of byStyle) {
+    const [color, weightRaw] = key.split(":");
+    const weight = Number.parseInt(weightRaw ?? "400", 10) || 400;
+    context.fillStyle = color ?? "#000000";
     context.font = buildCanvasFont(typography, weight);
     for (const word of bucket) {
       context.globalAlpha = word.opacity;
@@ -474,19 +472,13 @@ function useShapeMask(
   return { key, mask };
 }
 
-/** Loads brand + catalog fonts, bumping a version once glyphs are usable. */
-function useFontsReady(font: FontPickerValue): number {
+/** Loads brand fonts, bumping a version once glyphs are usable. */
+function useFontsReady(): number {
   const [version, setVersion] = React.useState(0);
-  const entry = getFontPickerFontById(font.fontId);
-  const entryId = entry?.id ?? "";
 
   React.useEffect(() => {
     let cancelled = false;
-    const tasks: Promise<unknown>[] = [ensureBrandFontsLoaded()];
-    if (entry) {
-      tasks.push(ensureFontPickerPreviewLoaded(entry));
-    }
-    void Promise.all(tasks).then(() => {
+    void ensureBrandFontsLoaded().then(() => {
       if (!cancelled) {
         setVersion((current) => current + 1);
       }
@@ -494,8 +486,7 @@ function useFontsReady(font: FontPickerValue): number {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryId]);
+  }, []);
 
   return version;
 }
@@ -509,12 +500,10 @@ export function buildWordTideLayoutForState(
   fontsVersion = 0,
 ): WordTideLayout {
   const settings = readWordTideSettings(state);
-  const font = readFontValue(state);
   return buildWordTideLayout(
     state.canvas.size.width,
     state.canvas.size.height,
     settings,
-    font,
     image,
     imageKey,
     mask,
@@ -554,11 +543,10 @@ export function WordTideCanvas(): React.JSX.Element {
 
   const size = deferredState.canvas.size;
   const settings = readWordTideSettings(deferredState);
-  const font = readFontValue(deferredState);
   const backgroundHex = readTideBackgroundHex(deferredState);
   const includeBackground = shouldIncludeToolcraftPreviewBackground({ state: deferredState });
   const renderScale = asNumber(deferredState.values["canvas.renderScale"], 1);
-  const fontsVersion = useFontsReady(font);
+  const fontsVersion = useFontsReady();
 
   const { image, key: imageKey } = usePreparedAsset(deferredState, "media.sourceImage");
   const { key: maskKey, mask } = useShapeMask(
@@ -573,7 +561,6 @@ export function WordTideCanvas(): React.JSX.Element {
         size.width,
         size.height,
         settings,
-        font,
         image,
         imageKey,
         mask,
@@ -585,7 +572,6 @@ export function WordTideCanvas(): React.JSX.Element {
       size.width,
       size.height,
       JSON.stringify(settings),
-      JSON.stringify(font),
       image,
       imageKey,
       mask,

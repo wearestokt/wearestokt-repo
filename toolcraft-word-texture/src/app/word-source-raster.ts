@@ -202,12 +202,24 @@ export function buildSourceImageCacheKey(
   const transform = asset.transform;
   return [
     asset.id,
+    fingerprintDataUrl(asset.dataUrl),
     canvasWidth,
     canvasHeight,
     transform?.rotationDeg ?? 0,
     transform?.flipHorizontal ? 1 : 0,
     transform?.flipVertical ? 1 : 0,
   ].join(":");
+}
+
+/** Stable short fingerprint so replaced uploads with the same media id invalidate caches. */
+function fingerprintDataUrl(dataUrl: string): string {
+  let hash = 2_166_136_261;
+  const step = Math.max(1, Math.floor(dataUrl.length / 512));
+  for (let index = 0; index < dataUrl.length; index += step) {
+    hash ^= dataUrl.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return `${dataUrl.length.toString(36)}:${(hash >>> 0).toString(36)}`;
 }
 
 export async function prepareSourceImageFromAsset(
