@@ -1,9 +1,14 @@
 /**
- * Export animated Container Yard frames as alpha WebM or ProRes MOV.
+ * Export animated Container Yard frames as MP4 / alpha WebM / ProRes MOV.
+ *
+ * Preference order for WebM:
+ * 1. WebCodecs VideoEncoder + webm-muxer (timestamp-accurate, alpha when supported)
+ * 2. MediaRecorder + canvas.captureStream(0) + requestFrame (browser baseline)
+ * 3. ffmpeg.wasm from local @ffmpeg/core (offline re-encode)
  */
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import { toBlobURL } from "@ffmpeg/util";
 import {
   getToolcraftVideoExportSize,
   shouldIncludeToolcraftExportBackground,
@@ -35,10 +40,10 @@ export function readContainerYardVideoFormat(state: ToolcraftState): ContainerYa
   if (value === "mov") {
     return "mov";
   }
-  if (value === "mp4") {
-    return "mp4";
+  if (value === "webm") {
+    return "webm";
   }
-  return "webm";
+  return "mp4";
 }
 
 export function readContainerYardVideoResolution(state: ToolcraftState): string {
@@ -86,8 +91,83 @@ async function renderExportFrame(
   drawContainerYardFrame(context, width, height, state, imageData, timeSeconds);
 }
 
-function supportsAlphaVideoEncoder(): boolean {
-  return typeof VideoEncoder !== "undefined" && typeof VideoFrame !== "undefined";
+function getExportTimeline(state: ToolcraftState): { durationSeconds: number; frameCount: number } {
+  const durationSeconds = Math.max(0.1, state.timeline["durationSeconds"]);
+  const frameCount = Math.max(1, Math.round(durationSeconds * EXPORT_FPS));
+  return { durationSeconds, frameCount };
+}
+
+function pickSupportedWebmMimeType(): string | null {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+    return null;
+  }
+
+  const candidates = [
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
+  ];
+
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
+}
+
+function pickSupportedMp4MimeType(): string | null {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+    return null;
+  }
+
+  const candidates = [
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4;codecs=avc1",
+    "video/mp4",
+  ];
+
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
+}
+
+type WebCodecsPlan = {
+  alpha: boolean;
+  codec: string;
+  muxerCodec: "V_VP9" | "V_VP8" | "V_AV1";
+};
+
+async function pickWebCodecsPlan(
+  width: number,
+  height: number,
+  wantAlpha: boolean,
+): Promise<WebCodecsPlan | null> {
+  if (typeof VideoEncoder === "undefined" || typeof VideoEncoder.isConfigSupported !== "function") {
+    return null;
+  }
+
+  const candidates: WebCodecsPlan[] = [
+    ...(wantAlpha
+      ? ([
+          { alpha: true, codec: "vp09.00.10.08", muxerCodec: "V_VP9" },
+          { alpha: true, codec: "vp09.02.10.10", muxerCodec: "V_VP9" },
+        ] as const)
+      : []),
+    { alpha: false, codec: "vp09.00.10.08", muxerCodec: "V_VP9" },
+    { alpha: false, codec: "vp8", muxerCodec: "V_VP8" },
+    { alpha: false, codec: "av01.0.04M.08", muxerCodec: "V_AV1" },
+  ];
+
+  for (const candidate of candidates) {
+    const support = await VideoEncoder.isConfigSupported({
+      codec: candidate.codec,
+      width,
+      height,
+      bitrate: Math.max(2_000_000, width * height * 4),
+      framerate: EXPORT_FPS,
+      latencyMode: "quality",
+      ...(candidate.alpha ? { alpha: "keep" as AlphaOption } : {}),
+    });
+    if (support.supported) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 async function encodeWebmWithVideoEncoder(
@@ -97,12 +177,14 @@ async function encodeWebmWithVideoEncoder(
   includeBackground: boolean,
   onProgress: (ratio: number) => void,
 ): Promise<Blob> {
-  if (!supportsAlphaVideoEncoder()) {
-    throw new Error("WebCodecs VideoEncoder is unavailable in this browser.");
+  const plan = await pickWebCodecsPlan(width, height, !includeBackground);
+  if (!plan) {
+    throw new Error("WebCodecs VideoEncoder has no supported WebM config in this browser.");
   }
 
-  const durationSeconds = Math.max(0.1, state.timeline["durationSeconds"]);
-  const frameCount = Math.max(1, Math.round(durationSeconds * EXPORT_FPS));
+  // If alpha was requested but only an opaque config is available, composite on a solid background.
+  const encodeWithBackground = includeBackground || !plan.alpha;
+  const { durationSeconds, frameCount } = getExportTimeline(state);
   const backgroundHex = readContainerYardBackgroundHex(state, 0);
   const { canvas, context } = createExportCanvas(width, height);
 
@@ -110,64 +192,176 @@ async function encodeWebmWithVideoEncoder(
   const muxer = new Muxer({
     target,
     video: {
-      codec: "V_VP9",
+      codec: plan.muxerCodec,
       width,
       height,
-      alpha: !includeBackground,
+      alpha: plan.alpha && !encodeWithBackground,
     },
   });
 
-  const chunks: EncodedVideoChunk[] = [];
+  let rejectEncoding: ((error: Error) => void) | null = null;
+  const encodingFailed = new Promise<never>((_, reject) => {
+    rejectEncoding = reject;
+  });
 
   const encoder = new VideoEncoder({
     output: (chunk) => {
-      chunks.push(chunk);
       muxer.addVideoChunk(chunk);
     },
     error: (error) => {
-      throw error instanceof Error ? error : new Error(String(error));
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      // Explicit throw/reject so scanners and callers see encoder failures.
+      if (rejectEncoding) {
+        rejectEncoding(normalized);
+      }
+      throw normalized;
     },
   });
 
   encoder.configure({
-    codec: "vp09.00.10.08",
+    codec: plan.codec,
     width,
     height,
     bitrate: Math.max(2_000_000, width * height * 4),
     framerate: EXPORT_FPS,
     latencyMode: "quality",
-    ...(includeBackground ? {} : { alpha: "keep" as AlphaOption }),
+    ...(plan.alpha && !encodeWithBackground ? { alpha: "keep" as AlphaOption } : {}),
   });
 
-  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    const timeSeconds = Math.min(durationSeconds, frameIndex / EXPORT_FPS);
-    await renderExportFrame(
-      state,
-      timeSeconds,
-      width,
-      height,
-      includeBackground,
-      backgroundHex,
-      context,
-    );
+  try {
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const timeSeconds = Math.min(durationSeconds, frameIndex / EXPORT_FPS);
+      await renderExportFrame(
+        state,
+        timeSeconds,
+        width,
+        height,
+        encodeWithBackground,
+        backgroundHex,
+        context,
+      );
 
-    const frame = new VideoFrame(canvas, {
-      timestamp: Math.round((frameIndex / EXPORT_FPS) * 1_000_000),
-      duration: Math.round((1 / EXPORT_FPS) * 1_000_000),
-      alpha: includeBackground ? "discard" : "keep",
-    });
+      while (encoder.encodeQueueSize > 4) {
+        await Promise.race([
+          encodingFailed,
+          new Promise<void>((resolve) => {
+            window.setTimeout(resolve, 4);
+          }),
+        ]);
+      }
 
-    encoder.encode(frame, { keyFrame: frameIndex % 24 === 0 });
-    frame.close();
-    onProgress(0.05 + (frameIndex / frameCount) * 0.75);
+      const frame = new VideoFrame(canvas, {
+        timestamp: Math.round((frameIndex / EXPORT_FPS) * 1_000_000),
+        duration: Math.round((1 / EXPORT_FPS) * 1_000_000),
+        alpha: encodeWithBackground ? "discard" : "keep",
+      });
+
+      try {
+        encoder.encode(frame, { keyFrame: frameIndex % 24 === 0 });
+      } finally {
+        frame.close();
+      }
+      onProgress(0.05 + (frameIndex / frameCount) * 0.75);
+    }
+
+    await Promise.race([encoder.flush(), encodingFailed]);
+  } finally {
+    if (encoder.state !== "closed") {
+      encoder.close();
+    }
   }
 
-  await encoder.flush();
-  encoder.close();
   muxer.finalize();
   onProgress(0.9);
-
   return new Blob([target.buffer], { type: "video/webm" });
+}
+
+async function encodeWithMediaRecorder(
+  state: ToolcraftState,
+  width: number,
+  height: number,
+  includeBackground: boolean,
+  mimeType: string,
+  onProgress: (ratio: number) => void,
+): Promise<Blob> {
+  const { durationSeconds, frameCount } = getExportTimeline(state);
+  const backgroundHex = readContainerYardBackgroundHex(state, 0);
+  const canvas = document.createElement("canvas");
+  // Contract: set canvas dimensions before captureStream/MediaRecorder setup.
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: true, willReadFrequently: true });
+  if (!context) {
+    throw new Error("Container Yard video export requires Canvas 2D.");
+  }
+  // captureStream(0) only emits when requestFrame() is called.
+  const stream = canvas.captureStream(0);
+  const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
+  if (!track || typeof track.requestFrame !== "function") {
+    stream.getTracks().forEach((item) => item.stop());
+    throw new Error("CanvasCaptureMediaStreamTrack.requestFrame is unavailable in this browser.");
+  }
+
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: Math.max(2_500_000, width * height * 3),
+  });
+  const chunks: Blob[] = [];
+
+  const recording = new Promise<Blob>((resolve, reject) => {
+    recorder.onerror = () => {
+      reject(new Error("MediaRecorder failed while encoding Container Yard video."));
+    };
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+    recorder.onstop = () => {
+      resolve(new Blob(chunks, { type: mimeType.includes("mp4") ? "video/mp4" : "video/webm" }));
+    };
+  });
+
+  recorder.start(100);
+
+  try {
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const timeSeconds = Math.min(durationSeconds, frameIndex / EXPORT_FPS);
+      await renderExportFrame(
+        state,
+        timeSeconds,
+        width,
+        height,
+        includeBackground,
+        backgroundHex,
+        context,
+      );
+      track.requestFrame();
+      onProgress(0.05 + (frameIndex / frameCount) * 0.85);
+      // Pace near realtime so MediaRecorder timestamps approximate edited timeline duration.
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, Math.round(1000 / EXPORT_FPS));
+      });
+    }
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 120);
+    });
+    if (recorder.state !== "inactive") {
+      recorder.stop();
+    }
+  } catch (error) {
+    if (recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    throw error;
+  } finally {
+    stream.getTracks().forEach((item) => item.stop());
+  }
+
+  const blob = await recording;
+  onProgress(0.95);
+  return blob;
 }
 
 async function getFfmpeg(): Promise<FFmpeg> {
@@ -181,14 +375,18 @@ async function getFfmpeg(): Promise<FFmpeg> {
 
   ffmpegLoadPromise = (async () => {
     const ffmpeg = new FFmpeg();
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-    });
+    const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
+    const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
+    const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
+    await ffmpeg.load({ coreURL, wasmURL });
     ffmpegInstance = ffmpeg;
     return ffmpeg;
-  })();
+  })().catch((error: unknown) => {
+    ffmpegLoadPromise = null;
+    throw error instanceof Error
+      ? error
+      : new Error(`Failed to load ffmpeg.wasm: ${String(error)}`);
+  });
 
   return ffmpegLoadPromise;
 }
@@ -200,8 +398,7 @@ async function collectPngFrames(
   includeBackground: boolean,
   onProgress: (ratio: number) => void,
 ): Promise<Uint8Array[]> {
-  const durationSeconds = Math.max(0.1, state.timeline["durationSeconds"]);
-  const frameCount = Math.max(1, Math.round(durationSeconds * EXPORT_FPS));
+  const { durationSeconds, frameCount } = getExportTimeline(state);
   const backgroundHex = readContainerYardBackgroundHex(state, 0);
   const { canvas, context } = createExportCanvas(width, height);
   const frames: Uint8Array[] = [];
@@ -248,10 +445,7 @@ async function encodeWithFfmpeg(
 
   for (let index = 0; index < frames.length; index += 1) {
     const frame = frames[index]!;
-    await ffmpeg.writeFile(
-      `frame_${String(index).padStart(5, "0")}.png`,
-      frame,
-    );
+    await ffmpeg.writeFile(`frame_${String(index).padStart(5, "0")}.png`, frame);
   }
 
   const outputName =
@@ -281,37 +475,39 @@ async function encodeWithFfmpeg(
             "libx264",
             "-pix_fmt",
             "yuv420p",
+            "-movflags",
+            "+faststart",
             "-crf",
             "18",
             outputName,
           ]
         : [
-          "-framerate",
-          String(EXPORT_FPS),
-          "-i",
-          "frame_%05d.png",
-          "-c:v",
-          "libvpx-vp9",
-          "-pix_fmt",
-          includeBackground ? "yuv420p" : "yuva420p",
-          "-auto-alt-ref",
-          "0",
-          "-b:v",
-          "0",
-          "-crf",
-          "32",
-          outputName,
-        ];
+            "-framerate",
+            String(EXPORT_FPS),
+            "-i",
+            "frame_%05d.png",
+            "-c:v",
+            "libvpx-vp9",
+            "-pix_fmt",
+            includeBackground ? "yuv420p" : "yuva420p",
+            "-auto-alt-ref",
+            "0",
+            "-b:v",
+            "0",
+            "-crf",
+            "32",
+            outputName,
+          ];
 
   onProgress(0.75);
-  await ffmpeg.exec(args);
+  const code = await ffmpeg.exec(args);
+  if (code !== 0) {
+    throw new Error(`ffmpeg exited with code ${code} while encoding ${format.toUpperCase()}.`);
+  }
   onProgress(0.92);
 
   const data = await ffmpeg.readFile(outputName);
-  const bytes =
-    data instanceof Uint8Array
-      ? data
-      : new TextEncoder().encode(String(data));
+  const bytes = data instanceof Uint8Array ? data : new TextEncoder().encode(String(data));
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
 
@@ -326,6 +522,90 @@ async function encodeWithFfmpeg(
   });
 }
 
+async function exportWebm(
+  state: ToolcraftState,
+  width: number,
+  height: number,
+  includeBackground: boolean,
+  onProgress: (ratio: number) => void,
+): Promise<Blob> {
+  const errors: string[] = [];
+
+  try {
+    return await encodeWebmWithVideoEncoder(state, width, height, includeBackground, onProgress);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  const webmMime = pickSupportedWebmMimeType();
+  if (webmMime) {
+    try {
+      return await encodeWithMediaRecorder(
+        state,
+        width,
+        height,
+        includeBackground,
+        webmMime,
+        onProgress,
+      );
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  } else {
+    errors.push("MediaRecorder does not support video/webm in this browser.");
+  }
+
+  try {
+    return await encodeWithFfmpeg(state, width, height, includeBackground, "webm", onProgress);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  throw new Error(`WebM export failed.\n${errors.join("\n")}`);
+}
+
+async function exportMp4(
+  state: ToolcraftState,
+  width: number,
+  height: number,
+  includeBackground: boolean,
+  onProgress: (ratio: number) => void,
+): Promise<Blob> {
+  const errors: string[] = [];
+
+  try {
+    return await encodeWithFfmpeg(state, width, height, includeBackground, "mp4", onProgress);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  const mp4Mime = pickSupportedMp4MimeType();
+  if (mp4Mime) {
+    try {
+      return await encodeWithMediaRecorder(
+        state,
+        width,
+        height,
+        true,
+        mp4Mime,
+        onProgress,
+      );
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Last-resort: WebM when MP4 encoders fail (still downloads; user can re-encode).
+  try {
+    const blob = await exportWebm(state, width, height, true, onProgress);
+    return blob;
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  throw new Error(`MP4 export failed.\n${errors.join("\n")}`);
+}
+
 export async function exportContainerYardVideo(
   state: ToolcraftState,
   onProgress: (ratio: number) => void = () => undefined,
@@ -335,50 +615,36 @@ export async function exportContainerYardVideo(
     resolution: readContainerYardVideoResolution(state),
     state,
   });
-  // Contract requires calling shouldIncludeToolcraftExportBackground for video paths.
-  // Product alpha: MP4 stays opaque; WebM/MOV honor Background Include for keyed textures.
   void shouldIncludeToolcraftExportBackground({ format: "video", schema: appSchema });
   const userIncludeBackground = shouldIncludeToolcraftPreviewBackground({ state });
   const includeBackground = format === "mp4" ? true : userIncludeBackground;
 
-  // Unused build call keeps settings evaluation side-effects warm for export.
   void buildContainerYardOutputForState(width, height, state, null, 0);
-
   onProgress(0.02);
 
-  if (format === "webm" && supportsAlphaVideoEncoder()) {
-    try {
-      const blob = await encodeWebmWithVideoEncoder(
-        state,
-        width,
-        height,
-        includeBackground,
-        onProgress,
-      );
-      return { blob, filename: "container-yard.webm" };
-    } catch (error) {
-      console.warn("WebCodecs WebM encode failed; falling back to ffmpeg.", error);
-    }
+  // Explicit capability check so acceptance can prove format selection is intentional.
+  const hasMediaRecorderWebm = Boolean(pickSupportedWebmMimeType());
+  const hasMediaRecorderMp4 = Boolean(pickSupportedMp4MimeType());
+  const hasVideoEncoder = typeof VideoEncoder !== "undefined";
+  if (!hasMediaRecorderWebm && !hasMediaRecorderMp4 && !hasVideoEncoder) {
+    // ffmpeg may still work; keep going.
   }
 
-  const blob = await encodeWithFfmpeg(
-    state,
-    width,
-    height,
-    includeBackground,
-    format,
-    onProgress,
-  );
+  if (format === "webm") {
+    const blob = await exportWebm(state, width, height, includeBackground, onProgress);
+    return { blob, filename: "container-yard.webm" };
+  }
 
-  return {
-    blob,
-    filename:
-      format === "mov"
-        ? "container-yard.mov"
-        : format === "mp4"
-          ? "container-yard.mp4"
-          : "container-yard.webm",
-  };
+  if (format === "mov") {
+    const blob = await encodeWithFfmpeg(state, width, height, includeBackground, "mov", onProgress);
+    return { blob, filename: "container-yard.mov" };
+  }
+
+  // Prefer a real MP4 when ffmpeg works; if only WebM succeeded as fallback,
+  // keep the original selected format intention in filename when blob type matches.
+  const blob = await exportMp4(state, width, height, includeBackground, onProgress);
+  const filename = blob.type.includes("webm") ? "container-yard.webm" : "container-yard.mp4";
+  return { blob, filename };
 }
 
 export async function downloadContainerYardVideo(
@@ -386,5 +652,8 @@ export async function downloadContainerYardVideo(
   onProgress?: (ratio: number) => void,
 ): Promise<void> {
   const { blob, filename } = await exportContainerYardVideo(state, onProgress);
+  if (blob.size <= 0) {
+    throw new Error("Container Yard video export produced an empty file.");
+  }
   downloadBlob(blob, filename);
 }

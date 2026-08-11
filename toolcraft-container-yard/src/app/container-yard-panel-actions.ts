@@ -68,10 +68,18 @@ export async function handleContainerYardPanelAction({
 
   if (action.value === "export-video") {
     reportProgress(0.02);
-    await downloadContainerYardVideo(state, (ratio) => {
-      reportProgress(Math.min(0.99, Math.max(0.02, ratio)));
-    });
-    reportProgress(1);
+    try {
+      await downloadContainerYardVideo(state, (ratio) => {
+        reportProgress(Math.min(0.99, Math.max(0.02, ratio)));
+      });
+      reportProgress(1);
+    } catch (error) {
+      reportProgress(1);
+      const message =
+        error instanceof Error ? error.message : "Container Yard video export failed.";
+      window.alert(`Video export failed.\n\n${message}`);
+      throw error instanceof Error ? error : new Error(message);
+    }
     return;
   }
 
