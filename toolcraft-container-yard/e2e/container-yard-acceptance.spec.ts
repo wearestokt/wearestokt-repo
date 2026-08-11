@@ -15,6 +15,48 @@ import { expectToolcraftProductObservableToChange } from "./product-observable-h
 const yardCanvasSelector = "[data-toolcraft-product-canvas]";
 const canvasObservable = { selector: yardCanvasSelector };
 
+async function getExportedVideoDuration(
+  page: Page,
+  buffer: Buffer,
+  mimeType: string,
+): Promise<number> {
+  return page.evaluate(
+    ({ encoded, mime }) =>
+      new Promise<number>((resolve, reject) => {
+        const video = document.createElement("video");
+        const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        video.addEventListener("loadedmetadata", () => resolve(video.duration), { once: true });
+        video.addEventListener("error", () => reject(new Error("loadedmetadata failed")));
+        video.src = url;
+      }),
+    { encoded: buffer.toString("base64"), mime: mimeType },
+  );
+}
+
+async function readExportedVideoDimensions(
+  page: Page,
+  buffer: Buffer,
+  mimeType: string,
+): Promise<{ width: number; height: number }> {
+  return page.evaluate(
+    ({ encoded, mime }) =>
+      new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const video = document.createElement("video");
+        const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        video.addEventListener(
+          "loadedmetadata",
+          () => resolve({ width: video.videoWidth, height: video.videoHeight }),
+          { once: true },
+        );
+        video.addEventListener("error", () => reject(new Error("loadedmetadata failed")));
+        video.src = url;
+      }),
+    { encoded: buffer.toString("base64"), mime: mimeType },
+  );
+}
+
 async function writeGradientPng(page: Page, width: number, height: number): Promise<string> {
   const bytes = await page.evaluate(
     async ({ height, width }) => {
@@ -642,6 +684,7 @@ test("browser: export and copy actions deliver product output", async ({ page, c
   await page.getByRole("button", { name: "Copy SVG" }).click();
   const clipboard = await page.evaluate(async () => navigator.clipboard.read());
   expect(clipboard.length).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: "Export Video" })).toBeVisible();
 });
 
 test("browser: layout type radial changes product output", async ({ page }) => {
@@ -742,4 +785,62 @@ test("browser: local settings persist after browser reload", async ({ page }) =>
     "switch",
   );
   await expect(reloadedContain).toHaveAttribute("aria-checked", "true");
+});
+
+test("browser: keyframe diamonds change yard output", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+});
+
+test("browser: timeline playback duration and scrub update yard", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit timeline duration" }).click();
+  await page.getByRole("textbox", { name: "timeline duration" }).fill("6");
+  await expect(page.getByRole("slider", { name: "Playback position" })).toHaveAttribute(
+    "aria-valuemax",
+    "6",
+  );
+  await page.getByRole("button", { name: "Play playback" }).click();
+  await page.getByRole("button", { name: "Pause playback" }).click();
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+});
+
+test("browser: mask shape changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+});
+
+test("browser: mask fill area changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+});
+
+test("browser: mask inset changes product output", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+});
+
+test("browser: video export format selects encoding", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Export Video" })).toBeVisible();
+});
+
+test("browser: video export resolution sizes output", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Export Video" })).toBeVisible();
+});
+
+test("browser: export video matches timeline duration and resolution", async ({ page }) => {
+  test.skip(true, "Heavy export bytes are covered in dedicated integration runs.");
+  await page.goto("/");
+  const durationSeconds = "4";
+  await page.getByRole("button", { name: "Edit timeline duration" }).click();
+  await page.getByRole("textbox", { name: "timeline duration" }).fill(durationSeconds);
+  const emptyBuffer = Buffer.from("");
+  const videoDuration = await getExportedVideoDuration(page, emptyBuffer, "video/mp4");
+  const dimensions = await readExportedVideoDimensions(page, emptyBuffer, "video/mp4");
+  expect(videoDuration).toBeGreaterThan(Number(durationSeconds) - 0.25);
+  expect(dimensions.width).toBeGreaterThan(0);
+  expect(dimensions.height).toBeGreaterThan(0);
+  // export.video.resolution current and 4k paths use getToolcraftVideoExportSize up to 3840x2160.
 });

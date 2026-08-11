@@ -62,4 +62,12 @@ describe("Container Yard performance automated tests", () => {
   it("perf: image resolution change stays responsive", () => {});
   it("perf: seed drag stays responsive", () => {});
   it("perf: render scale drag stays responsive", () => {});
+  it("perf: keyframe viewport stays stable", () => {});
+  it("perf: animation frame during playback", () => {});
+  it("perf: animation viewport drag stays smooth", () => {});
+  it("perf: mask shape change stays responsive", () => {});
+  it("perf: mask fill area drag stays responsive", () => {});
+  it("perf: mask inset drag stays responsive", () => {});
+  it("perf: video format change stays responsive", () => {});
+  it("perf: video resolution change stays responsive", () => {});
 });

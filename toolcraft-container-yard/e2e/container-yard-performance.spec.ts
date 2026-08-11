@@ -10,11 +10,13 @@ import {
   applyToolcraftPerformanceWorkloadFixture,
   dragToolcraftSliderByLabel,
   dragToolcraftSliderToPerformanceStressValue,
+  dragToolcraftCanvasViewport,
   expectToolcraftCanvasBackingPixelsForRenderScale,
   expectToolcraftCanvasViewportStable,
   expectToolcraftScenarioPerformanceBudget,
   getToolcraftFieldByLabel,
   getToolcraftPerformanceStressValue,
+  measureToolcraftAnimationFrames,
   measureToolcraftInteraction,
   measureToolcraftScenario,
   setToolcraftSliderValue,
@@ -643,4 +645,89 @@ test("browser perf: render scale drag stays responsive", async ({ page }) => {
   });
   await expectToolcraftCanvasBackingPixelsForRenderScale(page, yardCanvasSelector, 2);
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "canvas-render-scale-drag");
+});
+
+test("browser perf: keyframe viewport stays stable", async ({ page }) => {
+  await gotoYard(page);
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await page.getByRole("button", { name: "Center canvas" }).click();
+  await page.getByRole("button", { name: "Expand timeline panel" }).click();
+  const rotationField = await getToolcraftFieldByLabel(page, "Rotation");
+  await rotationField.getByRole("button", { name: /Add Rotation keyframe|Disable Rotation keyframes/ }).click();
+  const result = await expectToolcraftCanvasViewportStable(page, async () => {
+    await page.getByRole("slider", { name: "Playback position" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await page.getByRole("button", { name: "Play playback" }).click();
+    await page.getByRole("button", { name: "Pause playback" }).click();
+  });
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "timeline-keyframes-viewport");
+});
+
+test("browser perf: animation frame during playback", async ({ page }) => {
+  await gotoYard(page);
+  await setToolcraftSliderValue(page, "Stagger", 100);
+  await page.getByRole("button", { name: "Play playback" }).click();
+  const result = await measureToolcraftAnimationFrames(page, 120);
+  await page.getByRole("button", { name: "Pause playback" }).click();
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "animation-frame");
+});
+
+test("browser perf: animation viewport drag stays smooth", async ({ page }) => {
+  await gotoYard(page);
+  await setToolcraftSliderValue(page, "Stagger", 100);
+  await page.getByRole("button", { name: "Play playback" }).click();
+  const result = await measureToolcraftInteraction(page, async () => {
+    await dragToolcraftCanvasViewport(page);
+  });
+  await page.getByRole("button", { name: "Pause playback" }).click();
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "animation-viewport-drag");
+});
+
+test("browser perf: mask shape change stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  await measureSelectChange(page, "Shape", "Circle", "yard-mask-shape-change");
+});
+
+test("browser perf: mask fill area drag stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  await selectToolcraftOption(page, "Shape", "Circle");
+  await measureSliderDrag(page, "Fill area", "yard-mask-scale-drag");
+});
+
+test("browser perf: mask inset drag stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  await selectToolcraftOption(page, "Shape", "Circle");
+  await measureSliderDrag(page, "Inset", "yard-mask-inset-drag");
+});
+
+test("browser perf: video format change stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  const section = page
+    .locator("section")
+    .filter({ has: page.getByRole("button", { name: "Collapse Video Export section" }) })
+    .first();
+  const field = section.locator('[data-slot="field"]').filter({ hasText: /^Format/ }).first();
+  await field.getByRole("combobox").click();
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.getByRole("option", { name: "MOV" }).click();
+  });
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "export-video-format-change");
+});
+
+test("browser perf: video resolution change stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  const section = page
+    .locator("section")
+    .filter({ has: page.getByRole("button", { name: "Collapse Video Export section" }) })
+    .first();
+  const field = section.locator('[data-slot="field"]').filter({ hasText: /^Preset/ }).first();
+  await field.getByRole("combobox").click();
+  const result = await measureToolcraftInteraction(page, async () => {
+    await page.getByRole("option", { name: "4K" }).click();
+  });
+  await expect(page.locator(yardCanvasSelector)).toBeVisible();
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "export-video-resolution-change");
 });

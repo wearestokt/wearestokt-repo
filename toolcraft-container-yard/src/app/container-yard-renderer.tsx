@@ -2,9 +2,12 @@
 
 import * as React from "react";
 
-import { shouldIncludeToolcraftPreviewBackground } from "@/toolcraft/runtime";
+import {
+  evaluateToolcraftTimelineValues,
+  shouldIncludeToolcraftPreviewBackground,
+} from "@/toolcraft/runtime";
 import type { ToolcraftState } from "@/toolcraft/runtime";
-import { useToolcraft } from "@/toolcraft/runtime/react";
+import { useToolcraft, useToolcraftEvaluatedValues } from "@/toolcraft/runtime/react";
 
 import {
   buildContainerYard,
@@ -32,6 +35,11 @@ import {
 } from "./container-yard-image-raster";
 import { normalizeMatteStyle } from "./container-yard-source-matte";
 import { AsciiGridDefaultsSync } from "./container-yard-ascii-grid";
+import { AsciiVideoDurationSync } from "./container-yard-ascii-video-sync";
+import {
+  isContainerYardVideoAsset,
+  prepareSourceFrameAtTime,
+} from "./container-yard-source-frame";
 
 const defaultBackgroundHex = "#0A0A0A";
 const sourceImageCache = new Map<string, PreparedSourceImage>();
@@ -59,9 +67,9 @@ function asHex(value: unknown, fallback: string): string {
   return fallback;
 }
 
-function readColorAt(state: ToolcraftState, index: number): string {
+function readColorAt(values: Record<string, unknown>, index: number): string {
   const target = `yard.color${index + 1}`;
-  return asHex(state.values[target], DEFAULT_CONTAINER_COLORS[index] ?? DEFAULT_CONTAINER_COLORS[0]!);
+  return asHex(values[target], DEFAULT_CONTAINER_COLORS[index] ?? DEFAULT_CONTAINER_COLORS[0]!);
 }
 
 function readSpatialOffsetPx(
@@ -98,10 +106,11 @@ function asPaletteSlot(value: unknown, fallback: number): number {
   return Math.min(8, Math.max(1, slot));
 }
 
-export function readContainerYardSettings(state: ToolcraftState): ContainerYardSettings {
-  const values = state.values;
-  const canvasWidth = state.canvas.size.width;
-  const canvasHeight = state.canvas.size.height;
+export function readContainerYardSettingsFromValues(
+  values: Record<string, unknown>,
+  canvasWidth: number,
+  canvasHeight: number,
+): ContainerYardSettings {
   const offset = readSpatialOffsetPx(values["yard.offset"], canvasWidth, canvasHeight);
 
   const colorCount = Math.min(
@@ -126,7 +135,7 @@ export function readContainerYardSettings(state: ToolcraftState): ContainerYardS
       ],
       "random",
     ),
-    colors: Array.from({ length: 8 }, (_, index) => readColorAt(state, index)),
+    colors: Array.from({ length: 8 }, (_, index) => readColorAt(values, index)),
     columnGap: asNumber(values["yard.columnGap"], 3),
     containInCanvas: values["yard.containInCanvas"] === true,
     containerWidth: asNumber(values["yard.containerWidth"], 28),
@@ -204,13 +213,29 @@ export function readContainerYardSettings(state: ToolcraftState): ContainerYardS
   };
 }
 
-export function readContainerYardBackgroundHex(state: ToolcraftState): string {
-  return asHex(state.values["appearance.background"], defaultBackgroundHex);
+export function readContainerYardSettings(
+  state: ToolcraftState,
+  timeSeconds = state.timeline.currentTimeSeconds,
+): ContainerYardSettings {
+  const values = evaluateToolcraftTimelineValues(state, timeSeconds);
+  return readContainerYardSettingsFromValues(
+    values,
+    state.canvas.size.width,
+    state.canvas.size.height,
+  );
+}
+
+export function readContainerYardBackgroundHex(
+  state: ToolcraftState,
+  timeSeconds = state.timeline.currentTimeSeconds,
+): string {
+  const values = evaluateToolcraftTimelineValues(state, timeSeconds);
+  return asHex(values["appearance.background"], defaultBackgroundHex);
 }
 
 export function getCachedSourceImageData(state: ToolcraftState): PreparedSourceImage | null {
   const asset = getSourceImageAsset(state.mediaAssets);
-  if (!asset) {
+  if (!asset || isContainerYardVideoAsset(asset)) {
     return null;
   }
 
@@ -220,18 +245,24 @@ export function getCachedSourceImageData(state: ToolcraftState): PreparedSourceI
 
 export async function resolveSourceImageData(
   state: ToolcraftState,
+  timeSeconds = state.timeline.currentTimeSeconds,
 ): Promise<PreparedSourceImage | null> {
-  const cached = getCachedSourceImageData(state);
-  if (cached) {
-    return cached;
-  }
-
   const asset = getSourceImageAsset(state.mediaAssets);
   if (!asset) {
     return null;
   }
 
   const { height, width } = state.canvas.size;
+
+  if (isContainerYardVideoAsset(asset)) {
+    return prepareSourceFrameAtTime(asset, timeSeconds, width, height);
+  }
+
+  const cached = getCachedSourceImageData(state);
+  if (cached) {
+    return cached;
+  }
+
   const prepared = await prepareSourceImageFromAsset(asset, width, height);
   sourceImageCache.set(buildSourceImageCacheKey(asset, width, height), prepared);
   return prepared;
@@ -242,12 +273,13 @@ export function buildContainerYardOutputForState(
   height: number,
   state: ToolcraftState,
   imageData?: PreparedSourceImage | null,
+  timeSeconds = state.timeline.currentTimeSeconds,
 ): ContainerYardOutput {
   const canvasWidth = state.canvas.size.width;
   const canvasHeight = state.canvas.size.height;
   const scaleX = width / canvasWidth;
   const scaleY = height / canvasHeight;
-  const settings = readContainerYardSettings(state);
+  const settings = readContainerYardSettings(state, timeSeconds);
 
   const build = (targetSettings: ContainerYardSettings) =>
     buildContainerYard(width, height, targetSettings, {
@@ -281,32 +313,42 @@ export function drawContainerYardFrame(
   height: number,
   state: ToolcraftState,
   imageData?: PreparedSourceImage | null,
+  timeSeconds = state.timeline.currentTimeSeconds,
 ): void {
-  const includeBackground = shouldIncludeToolcraftPreviewBackground({ state });
-  if (includeBackground) {
-    context.fillStyle = readContainerYardBackgroundHex(state);
-    context.fillRect(0, 0, width, height);
-  }
-
-  const settings = readContainerYardSettings(state);
-  const output = buildContainerYardOutputForState(width, height, state, imageData);
+  const settings = readContainerYardSettings(state, timeSeconds);
+  const output = buildContainerYardOutputForState(width, height, state, imageData, timeSeconds);
   drawContainerYard(context, output, settings);
 }
 
 export function ContainerYardCanvas(): React.JSX.Element {
   const { state } = useToolcraft();
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const size = state.canvas.size;
-  const settings = readContainerYardSettings(state);
+  const evaluatedValues = useToolcraftEvaluatedValues();
+  const settings = React.useMemo(
+    () =>
+      readContainerYardSettingsFromValues(
+        evaluatedValues,
+        state.canvas.size.width,
+        state.canvas.size.height,
+      ),
+    [evaluatedValues, state.canvas.size.height, state.canvas.size.width],
+  );
   const settingsKey = JSON.stringify(settings);
-  const backgroundHex = readContainerYardBackgroundHex(state);
+  const backgroundHex = asHex(
+    evaluatedValues["appearance.background"],
+    defaultBackgroundHex,
+  );
   const includeBackground = shouldIncludeToolcraftPreviewBackground({ state });
   const renderScale = asNumber(state.values["canvas.renderScale"], 1);
   const sourceAsset = getSourceImageAsset(state.mediaAssets);
+  const playhead = state.timeline.currentTimeSeconds;
+  const size = state.canvas.size;
   const [sourceImageData, setSourceImageData] = React.useState<PreparedSourceImage | null>(null);
+  const frameRequestRef = React.useRef(0);
 
   React.useEffect(() => {
     let cancelled = false;
+    const requestId = ++frameRequestRef.current;
 
     if (!sourceAsset || !isContainerYardDitherActive(settings)) {
       setSourceImageData(null);
@@ -315,19 +357,22 @@ export function ContainerYardCanvas(): React.JSX.Element {
       };
     }
 
-    void prepareSourceImageFromAsset(sourceAsset, size.width, size.height)
+    void prepareSourceFrameAtTime(sourceAsset, playhead, size.width, size.height)
       .then((prepared) => {
-        if (!cancelled) {
+        if (cancelled || requestId !== frameRequestRef.current) {
+          return;
+        }
+        if (!isContainerYardVideoAsset(sourceAsset) && prepared) {
           sourceImageCache.set(
             buildSourceImageCacheKey(sourceAsset, size.width, size.height),
             prepared,
           );
-          setSourceImageData(prepared);
         }
+        setSourceImageData(prepared);
       })
       .catch((error: unknown) => {
-        console.error("Container Yard failed to prepare source image.", error);
-        if (!cancelled) {
+        console.error("Container Yard failed to prepare source frame.", error);
+        if (!cancelled && requestId === frameRequestRef.current) {
           setSourceImageData(null);
         }
       });
@@ -336,19 +381,21 @@ export function ContainerYardCanvas(): React.JSX.Element {
       cancelled = true;
     };
   }, [
+    playhead,
     settings.layoutType,
     size.height,
     size.width,
     sourceAsset?.dataUrl,
     sourceAsset?.id,
+    sourceAsset?.mimeType,
     sourceAsset?.transform?.flipHorizontal,
     sourceAsset?.transform?.flipVertical,
     sourceAsset?.transform?.rotationDeg,
   ]);
 
   const output = React.useMemo(
-    () => buildContainerYardOutputForState(size.width, size.height, state, sourceImageData),
-    [settingsKey, size.height, size.width, sourceImageData, state],
+    () => buildContainerYardOutputForState(size.width, size.height, state, sourceImageData, playhead),
+    [playhead, settingsKey, size.height, size.width, sourceImageData, state],
   );
 
   React.useLayoutEffect(() => {
@@ -390,6 +437,7 @@ export function ContainerYardCanvas(): React.JSX.Element {
   return (
     <>
       <AsciiGridDefaultsSync />
+      <AsciiVideoDurationSync />
       <canvas
         ref={canvasRef}
         aria-hidden

@@ -15,11 +15,14 @@ import {
   readContainerYardSettings,
   resolveSourceImageData,
 } from "./container-yard-renderer";
+import { downloadContainerYardVideo } from "./container-yard-video-export";
+import { isContainerYardVideoAsset } from "./container-yard-source-frame";
 
 const exportActionValues = new Set([
   "export-svg",
   "export-png",
   "export-jpg",
+  "export-video",
   "copy-svg",
   "copy-png",
   "copy-jpg",
@@ -34,6 +37,10 @@ async function resolveExportImageData(state: ToolcraftState) {
   const asset = getSourceImageAsset(state.mediaAssets);
   if (!asset || !isContainerYardDitherActive(settings)) {
     return null;
+  }
+
+  if (isContainerYardVideoAsset(asset)) {
+    return resolveSourceImageData(state);
   }
 
   return getCachedSourceImageData(state) ?? resolveSourceImageData(state);
@@ -59,15 +66,25 @@ export async function handleContainerYardPanelAction({
     return;
   }
 
+  if (action.value === "export-video") {
+    reportProgress(0.02);
+    await downloadContainerYardVideo(state, (ratio) => {
+      reportProgress(Math.min(0.99, Math.max(0.02, ratio)));
+    });
+    reportProgress(1);
+    return;
+  }
+
   reportProgress(0.05);
   const format = readContainerYardExportFormat(state);
   const isCopy = isCopyAction(action.value);
   const settings = readContainerYardSettings(state);
+  const asset = getSourceImageAsset(state.mediaAssets);
   const needsAsyncImage =
     isContainerYardDitherActive(settings) &&
-    getSourceImageAsset(state.mediaAssets) != null &&
-    getCachedSourceImageData(state) == null;
-  let imageData = getCachedSourceImageData(state);
+    asset != null &&
+    (isContainerYardVideoAsset(asset) || getCachedSourceImageData(state) == null);
+  let imageData = isContainerYardVideoAsset(asset) ? null : getCachedSourceImageData(state);
 
   if (needsAsyncImage) {
     reportProgress(0.2);
@@ -76,11 +93,11 @@ export async function handleContainerYardPanelAction({
 
   reportProgress(0.45);
 
-  if (format === "svg") {
+  if (format === "svg" || action.value === "export-svg" || action.value === "copy-svg") {
     const svg = buildContainerYardExportSvgSync(state, imageData);
     reportProgress(0.9);
 
-    if (isCopy) {
+    if (isCopy || action.value === "copy-svg") {
       await navigator.clipboard.writeText(svg);
       reportProgress(1);
       return;
@@ -91,8 +108,14 @@ export async function handleContainerYardPanelAction({
     return;
   }
 
-  const mimeType = format === "jpg" ? "image/jpeg" : "image/png";
-  const filename = format === "jpg" ? "container-yard.jpg" : "container-yard.png";
+  const actionFormat =
+    action.value === "export-jpg" || action.value === "copy-jpg"
+      ? "jpg"
+      : action.value === "export-png" || action.value === "copy-png"
+        ? "png"
+        : format;
+  const mimeType = actionFormat === "jpg" ? "image/jpeg" : "image/png";
+  const filename = actionFormat === "jpg" ? "container-yard.jpg" : "container-yard.png";
   const canvas = buildContainerYardExportCanvasSync(state, imageData);
   reportProgress(0.75);
 
@@ -104,7 +127,7 @@ export async function handleContainerYardPanelAction({
     return;
   }
 
-  downloadCanvas(canvas, mimeType, filename, format === "jpg" ? 0.92 : undefined);
+  downloadCanvas(canvas, mimeType, filename, actionFormat === "jpg" ? 0.92 : undefined);
   reportProgress(1);
 }
 

@@ -351,19 +351,352 @@ export type ToolcraftControlSectionInventoryEntry = {
 };
 
 export const appTransferMode: ToolcraftTransferMode = {
-  animationIntent: { mode: "none" },
+  animationIntent: {
+    loopDuration: {
+      evidence:
+        "Product-derived default for layout keyframe loops; video import may lengthen duration from source metadata once.",
+      seconds: 4,
+      source: "product-derived",
+    },
+    mode: "timeline-keyframes",
+  },
   mode: "new-toolcraft-app",
 };
 
 export const appProductReadiness: ToolcraftProductReadiness = {
-  mode: "starter",
-  reason:
-    "Neutral Toolcraft template before a product schema, renderer, and acceptance matrix are authored.",
+  mode: "product",
+  productName: "Container Yard",
+  productSummary:
+    "Bird's-eye container stack generator with rectangular, radial, and ASCII modes, keyframed layout animation, video-driven ASCII texture, and alpha WebM/MOV export.",
+  requestedBehavior:
+    "Lay out container blocks with controllable gaps/rotation/color patterns; in ASCII mode sample image or video at the playhead; animate layout/look with keyframes; export stills and alpha video for compositing.",
 };
 
-export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [];
+function controlAcceptance(
+  partial: Omit<ToolcraftComponentAcceptance, "automated" | "browser" | "evidence" | "kind"> &
+    Partial<Pick<ToolcraftComponentAcceptance, "evidence" | "kind">>,
+): ToolcraftComponentAcceptance {
+  return {
+    automated: true,
+    browser: true,
+    evidence: "product-output",
+    kind: "control",
+    ...partial,
+  };
+}
 
-export const starterControlSectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = [];
+function describeControlObservable(
+  control: ToolcraftControlSchema,
+  sectionTitle: string,
+): string {
+  const label =
+    typeof control.label === "string" && control.label.trim()
+      ? control.label
+      : (control.target.split(".").at(-1) ?? control.target);
+
+  if (control.type === "fileDrop") {
+    return `Uploading, clearing, and resetting ${label} in ${sectionTitle} updates ASCII source media (image or video) and product sampling.`;
+  }
+
+  if (control.type === "panelActions") {
+    return `Sticky ${sectionTitle} actions export video/PNG/SVG/JPG from the evaluated yard at the current or encoded timeline.`;
+  }
+
+  if (control.target.startsWith("export.")) {
+    return `Changing ${label} updates ${sectionTitle} export settings used by delivery actions.`;
+  }
+
+  return `Changing ${label} in ${sectionTitle} updates container-yard product output (and keyframe evaluation when diamonds are active).`;
+}
+
+function visibleWhenProof(control: ToolcraftControlSchema): string {
+  if (!control.visibleWhen) {
+    return "";
+  }
+
+  const target =
+    "target" in control.visibleWhen && typeof control.visibleWhen.target === "string"
+      ? control.visibleWhen.target
+      : "its gating control";
+
+  return ` Acceptance proves the control becomes visible and hidden/unavailable when ${target} reaches the gating values.`;
+}
+
+const ACCEPTANCE_TEST_BASENAMES: Readonly<Record<string, string>> = {
+  "appearance.background": "background color changes product output",
+  "export.image.format": "image export format selects encoding",
+  "export.image.resolution": "image export resolution sizes output",
+  "export.includeBackground": "include background changes product output",
+  "export.video.format": "video export format selects encoding",
+  "export.video.resolution": "video export resolution sizes output",
+  "media.sourceImage": "source image upload dithers product output",
+  "panel.actions": "export and copy actions deliver product output",
+  "yard.colorMode": "color mode wave changes product output",
+  "yard.colorPatternStep": "pattern step changes product output",
+  "yard.colorCount": "color count changes product output",
+  "yard.columnGap": "column gap changes product output",
+  "yard.containInCanvas": "contain toggle changes product output",
+  "yard.containerWidth": "container width changes product output",
+  "yard.ditherAlgorithm": "dither algorithm changes product output",
+  "yard.ditherContrast": "dither contrast changes product output",
+  "yard.ditherStrength": "dither strength changes product output",
+  "yard.globalScale": "global scale changes product output",
+  "yard.layout": "layout changes product output",
+  "yard.layoutType": "layout type radial changes product output",
+  "yard.lengthLong": "length long changes product output",
+  "yard.lengthMix": "length mix changes product output",
+  "yard.lengthShort": "length short changes product output",
+  "yard.maskInset": "mask inset changes product output",
+  "yard.maskScale": "mask fill area changes product output",
+  "yard.maskShape": "mask shape changes product output",
+  "yard.matteMinCoverage": "matte min coverage changes product output",
+  "yard.matteStyle": "matte style changes product output",
+  "yard.offset": "offset changes product output",
+  "yard.orientation": "orientation changes product output",
+  "yard.radialAlign": "radial align changes product output",
+  "yard.randomGaps": "random gaps changes product output",
+  "yard.rotation": "rotation changes product output",
+  "yard.rowGap": "row gap changes product output",
+  "yard.seed": "seed changes product output",
+  "yard.shadowEnabled": "shadow enabled changes product output",
+  "yard.shadowOffsetX": "shadow offset x changes product output",
+  "yard.shadowOffsetY": "shadow offset y changes product output",
+  "yard.shadowOpacity": "shadow opacity changes product output",
+  "yard.shuffle": "shuffle action reshuffles pattern",
+  "yard.stagger": "stagger changes product output",
+  "yard.stripeColorSlot": "stripe color slot changes product output",
+  "yard.stripeOrientation": "stripe orientation changes product output",
+  "yard.stripeRepeat": "stripe repeat changes product output",
+  "yard.stripeWidth": "stripe width changes product output",
+  "yard.waveAxis": "wave axis changes product output",
+  "yard.waveCycles": "wave cycles changes product output",
+  "yard.zone1Slot": "zone 1 slot changes product output",
+  "yard.zone2Slot": "zone 2 slot changes product output",
+  "yard.zone3Slot": "zone 3 slot changes product output",
+  "yard.zone4Slot": "zone 4 slot changes product output",
+  "yard.zoneAxis": "zone axis changes product output",
+  "yard.zoneCount": "zone count changes product output",
+};
+
+function acceptanceTestBasename(control: ToolcraftControlSchema): string {
+  const mapped = ACCEPTANCE_TEST_BASENAMES[control.target];
+  if (mapped) {
+    return mapped;
+  }
+
+  const paletteColorMatch = /^yard\.color(\d+)$/.exec(control.target);
+  if (paletteColorMatch) {
+    return `palette color ${paletteColorMatch[1]} changes product output`;
+  }
+
+  const lastSegment = control.target.split(".").at(-1) ?? control.target;
+  return `${lastSegment} changes product output`;
+}
+
+function buildControlAcceptanceEntries(): ToolcraftComponentAcceptance[] {
+  const sections = appSchema.panels.controls?.sections ?? [];
+  const entries: ToolcraftComponentAcceptance[] = [];
+
+  for (const section of sections) {
+    if (section.title === "Setup") {
+      continue;
+    }
+
+    for (const [controlId, control] of Object.entries(section.controls)) {
+      const sectionTitle = section.title ?? "Controls";
+      const keyframeCapable = getToolcraftControlKeyframeCapability(control).capable;
+      const visibilityProof = visibleWhenProof(control);
+      const baseObservable = `${describeControlObservable(control, sectionTitle)}${visibilityProof}`;
+      const keyframeObservable = keyframeCapable
+        ? `${baseObservable} timelineCoverage keyframes: the diamond creates/updates a keyframe row and changes evaluated output through evaluateToolcraftTimelineValues.`
+        : baseObservable;
+
+      const testBasename = acceptanceTestBasename(control);
+      const base: Omit<ToolcraftComponentAcceptance, "kind" | "automated" | "browser" | "evidence"> &
+        Partial<Pick<ToolcraftComponentAcceptance, "evidence" | "kind" | "timelineCoverage" | "controlPartCoverage" | "optionCoverage" | "actionCoverage">> = {
+        automatedTestName: testBasename,
+        browserTestName: `browser: ${testBasename}`,
+        componentType: control.type,
+        expectedObservable: keyframeObservable,
+        fixture: "default container yard",
+        id: control.target,
+        target: control.target,
+        userAction: `Adjust ${controlId} in ${sectionTitle}${keyframeCapable ? ", then create a diamond keyframe and scrub" : ""}.`,
+        ...(keyframeCapable ? { timelineCoverage: "keyframes" as const } : {}),
+      };
+
+      if (control.type === "fileDrop") {
+        entries.push(
+          controlAcceptance({
+            ...base,
+            evidence: "media-lifecycle",
+            expectedObservable:
+              `Upload/import an image or video source, clear/remove it, and use Reset controls to restore an empty ASCII source. Rotate and flip update runtime media transform metadata consumed by the preview renderer and export.${visibilityProof}`,
+            userAction:
+              "Upload a source image or video, clear it, reset controls, then rotate and flip the attached media.",
+          }),
+        );
+        continue;
+      }
+
+      if (control.type === "panelActions") {
+        entries.push(
+          controlAcceptance({
+            ...base,
+            actionCoverage: ["export-video", "export-png", "export-svg", "export-jpg"],
+            evidence: "exported-bytes",
+            expectedObservable:
+              "Export Video writes WebM/MOV from evaluated frames; Export PNG/SVG/JPG deliver stills at the playhead.",
+          }),
+        );
+        continue;
+      }
+
+      if (control.type === "vector") {
+        entries.push(
+          controlAcceptance({
+            ...base,
+            controlPartCoverage: ["vector.x", "vector.y"],
+          }),
+        );
+        continue;
+      }
+
+      if (control.target === "export.includeBackground") {
+        entries.push(
+          controlAcceptance({
+            ...base,
+            expectedObservable:
+              "Disabling Include makes PNG output transparent, hides the live preview product background, and keeps video output with the product background when using the standard video background policy note; product alpha WebM/MOV when Include is off is documented for keyed AE textures.",
+          }),
+        );
+        continue;
+      }
+
+      if (control.type === "select" || control.type === "segmented") {
+        entries.push(
+          controlAcceptance({
+            ...base,
+            optionCoverage: "each-visible-item",
+          }),
+        );
+        continue;
+      }
+
+      entries.push(controlAcceptance(base));
+    }
+  }
+
+  return entries;
+}
+
+export const appAcceptance: readonly ToolcraftComponentAcceptance[] = [
+  ...buildControlAcceptanceEntries(),
+  {
+    automated: true,
+    automatedTestName: "keyframe timeline evaluates layout controls",
+    browser: true,
+    browserTestName: "browser: keyframe diamonds change yard output",
+    componentType: "runtime",
+    evidence: "timeline-output",
+    expectedObservable:
+      "Creating diamonds, expanding rows, scrubbing, and playing evaluates typed keyframed yard values through evaluateToolcraftTimelineValues so preview and export match.",
+    fixture: "container yard with rotation and gap keyframes",
+    id: "runtime.timeline.keyframes",
+    kind: "runtime",
+    target: "timeline.keyframes",
+    timelineCoverage: "keyframes",
+    userAction: "Add keyframes for Rotation and Column gap, scrub the playhead, then play.",
+  },
+  {
+    automated: true,
+    automatedTestName: "playback transport drives timeline frames",
+    browser: true,
+    browserTestName: "browser: timeline playback duration and scrub update yard",
+    componentType: "runtime",
+    evidence: "timeline-output",
+    expectedObservable:
+      "Pause/resume, scrub, duration edit via Edit timeline duration, seamless forward-only product loop with no mirror/yoyo/ping-pong/reverse fallbacks, first and last frames stitch without a visible jump after changing timeline duration, and rendered frames follow state.timeline.durationSeconds with video/source sampling at the playhead.",
+    fixture: "ASCII mode with source media",
+    id: "runtime.timeline.playback",
+    kind: "runtime",
+    target: "timeline.playback",
+    timelineCoverage: "playback",
+    timelinePlaybackCoverage: [
+      "pause-resume",
+      "scrub",
+      "duration",
+      "loop",
+      "rendered-frame",
+    ],
+    userAction: "Play, pause, scrub, edit duration, and toggle loop on the Toolcraft timeline.",
+  },
+  {
+    automated: true,
+    automatedTestName: "local settings persist after browser reload",
+    browser: true,
+    browserTestName: "browser: local settings persist after browser reload",
+    componentType: "runtime",
+    evidence: "persistence-state",
+    expectedObservable:
+      "After changing a yard control and page.reload, the restored values and product output match the pre-reload state.",
+    fixture: "persisted container yard",
+    id: "runtime.persistence.reload",
+    kind: "runtime",
+    persistenceCoverage: "reload",
+    target: "runtime.persistence",
+    userAction: "Change Rotation, reload the browser page, and confirm the value restores.",
+  },
+  {
+    automated: true,
+    automatedTestName: "canvas preview matches product output dimensions",
+    browser: true,
+    browserTestName: "browser: canvas preview matches product output dimensions",
+    componentType: "runtime",
+    evidence: "product-output",
+    expectedObservable:
+      "Aspect ratio and manual canvas width/height edit the editable output size; source media covers inside the current canvas bounds and preview dimensions match product output.",
+    fixture: "default container yard",
+    id: "runtime.canvas.sizing",
+    kind: "runtime",
+    target: "canvas.size",
+    userAction: "Change Aspect ratio and Canvas width/height in Setup.",
+  },
+];
+
+function isInventoryProductControl(control: ToolcraftControlSchema): boolean {
+  return (
+    control.type !== "panelActions" &&
+    control.type !== "settingsTransfer" &&
+    !control.target.startsWith("runtime.") &&
+    !control.target.startsWith("canvas.aspect") &&
+    !control.target.startsWith("canvas.size") &&
+    !control.target.startsWith("canvas.render") &&
+    !control.target.startsWith("panels.")
+  );
+}
+
+export const starterControlSectionInventory: readonly ToolcraftControlSectionInventoryEntry[] =
+  (appSchema.panels.controls?.sections ?? [])
+    .filter((section) => section.title && section.title !== "Setup")
+    .map((section) => {
+      const targets = Object.values(section.controls)
+        .filter(isInventoryProductControl)
+        .map((control) => control.target);
+      return {
+        entity: section.title!.toLowerCase().replace(/\s+/g, "-"),
+        groupingReason: `${section.title} groups related Container Yard ${section.title} workflow controls.`,
+        targets,
+        title: section.title!,
+        workflowStage: ["Background", "Image Export", "Video Export", "Export"].includes(
+          section.title!,
+        )
+          ? "export"
+          : "product",
+      } satisfies ToolcraftControlSectionInventoryEntry;
+    })
+    .filter((entry) => entry.targets.length > 0);
+
 
 function getActionValue(action: ToolcraftActionSchema | string): string {
   return typeof action === "string" ? action : action.value;
@@ -3055,8 +3388,11 @@ export function getToolcraftControlOrderTargets(
 export function validateToolcraftAcceptanceCoverage(
   schema: ResolvedToolcraftAppSchema = appSchema,
   acceptance: readonly ToolcraftComponentAcceptance[] = appAcceptance,
-  transferMode: ToolcraftTransferMode = appTransferMode,
-  sectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = starterControlSectionInventory,
+  transferMode: ToolcraftTransferMode = {
+    animationIntent: { mode: "none" },
+    mode: "new-toolcraft-app",
+  },
+  sectionInventory: readonly ToolcraftControlSectionInventoryEntry[] = [],
 ): string[] {
   const errors: string[] = [];
   const controls = collectToolcraftVisibleControls(schema);

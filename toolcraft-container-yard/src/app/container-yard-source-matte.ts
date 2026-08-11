@@ -1,5 +1,6 @@
 /**
- * Source matte for ASCII mode: alpha channel and edge-connected auto background removal.
+ * Source matte for ASCII mode: alpha channel, edge-connected auto background removal,
+ * and silhouette color cutout so interior empty holes are skipped too.
  */
 
 import type { ContainerLayoutSlot } from "./container-yard-layout-types";
@@ -22,6 +23,10 @@ export type PreparedSourceMatte = {
   subjectMask: Uint8Array;
   width: number;
 };
+
+function relativeLuminance(r: number, g: number, b: number): number {
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
 
 function colorDistance(
   r: number,
@@ -79,16 +84,57 @@ function estimateBorderBackgroundColor(
   };
 }
 
+function toleranceToDistance(tolerance: number, scale = 1): number {
+  const normalized = Math.min(100, Math.max(0, tolerance)) / 100;
+  return Math.round(normalized * 96 * scale);
+}
+
+function isSilhouetteLikeSource(
+  image: PreparedSourceImage,
+  background: { b: number; g: number; r: number },
+): boolean {
+  const bgLuma = relativeLuminance(background.r, background.g, background.b);
+  const brightBackground = bgLuma >= 0.78;
+  const darkBackground = bgLuma <= 0.22;
+  if (!brightBackground && !darkBackground) {
+    return false;
+  }
+
+  const { data, height, width } = image;
+  let opposite = 0;
+  let total = 0;
+  const step = Math.max(1, Math.floor(Math.min(width, height) / 96));
+
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const index = (y * width + x) * 4;
+      const luma = relativeLuminance(
+        data[index] ?? 0,
+        data[index + 1] ?? 0,
+        data[index + 2] ?? 0,
+      );
+      total += 1;
+      if (brightBackground && luma <= 0.45) {
+        opposite += 1;
+      } else if (darkBackground && luma >= 0.55) {
+        opposite += 1;
+      }
+    }
+  }
+
+  return total > 0 && opposite / total >= 0.02;
+}
+
 function buildAutoBackgroundMask(
   image: PreparedSourceImage,
+  background: { b: number; g: number; r: number },
   tolerance: number,
 ): Uint8Array {
   const { data, height, width } = image;
   const pixelCount = width * height;
   const backgroundMask = new Uint8Array(pixelCount);
   const visited = new Uint8Array(pixelCount);
-  const background = estimateBorderBackgroundColor(data, width, height);
-  const maxDistance = Math.round((Math.min(100, Math.max(0, tolerance)) / 100) * 96);
+  const maxDistance = toleranceToDistance(tolerance);
   const queue: number[] = [];
 
   const enqueueIfBackground = (x: number, y: number) => {
@@ -144,6 +190,43 @@ function buildAutoBackgroundMask(
   return backgroundMask;
 }
 
+/**
+ * For high-contrast silhouettes, treat ANY near-background pixel as empty —
+ * including white holes completely enclosed by the subject.
+ */
+function buildSilhouetteEmptyMask(
+  image: PreparedSourceImage,
+  background: { b: number; g: number; r: number },
+  tolerance: number,
+): Uint8Array {
+  const { data, height, width } = image;
+  const emptyMask = new Uint8Array(width * height);
+  const maxDistance = toleranceToDistance(tolerance, 1.45);
+  const bgLuma = relativeLuminance(background.r, background.g, background.b);
+  const brightBackground = bgLuma >= 0.78;
+  const darkBackground = bgLuma <= 0.22;
+  // Soft luma gate catches AA fringes and flat empty fills even when RGB drifts slightly.
+  const lumaEmptyThreshold = brightBackground ? 0.72 : darkBackground ? 0.28 : -1;
+
+  for (let index = 0; index < width * height; index += 1) {
+    const channelIndex = index * 4;
+    const r = data[channelIndex] ?? 0;
+    const g = data[channelIndex + 1] ?? 0;
+    const b = data[channelIndex + 2] ?? 0;
+    const distance = colorDistance(r, g, b, background.r, background.g, background.b);
+    const luma = relativeLuminance(r, g, b);
+    const lumaEmpty =
+      lumaEmptyThreshold >= 0 &&
+      (brightBackground ? luma >= lumaEmptyThreshold : luma <= lumaEmptyThreshold);
+
+    if (distance <= maxDistance || lumaEmpty) {
+      emptyMask[index] = 1;
+    }
+  }
+
+  return emptyMask;
+}
+
 function buildAlphaSubjectMask(
   image: PreparedSourceImage,
   alphaThreshold: number,
@@ -164,7 +247,7 @@ export function buildSourceMatteMask(
   image: PreparedSourceImage,
   settings: SourceMatteSettings,
 ): PreparedSourceMatte {
-  const { data, height, width } = image;
+  const { height, width } = image;
   const pixelCount = width * height;
   const subjectMask = new Uint8Array(pixelCount);
 
@@ -177,12 +260,23 @@ export function buildSourceMatteMask(
     settings.mode === "auto"
       ? null
       : buildAlphaSubjectMask(image, settings.alphaThreshold);
-  const backgroundMask =
-    settings.mode === "alpha" ? null : buildAutoBackgroundMask(image, settings.tolerance);
+
+  let floodMask: Uint8Array | null = null;
+  let silhouetteMask: Uint8Array | null = null;
+
+  if (settings.mode !== "alpha") {
+    const background = estimateBorderBackgroundColor(image.data, width, height);
+    floodMask = buildAutoBackgroundMask(image, background, settings.tolerance);
+    if (isSilhouetteLikeSource(image, background)) {
+      silhouetteMask = buildSilhouetteEmptyMask(image, background, settings.tolerance);
+    }
+  }
 
   for (let index = 0; index < pixelCount; index += 1) {
     const alphaPass = alphaMask ? alphaMask[index]! > 127 : true;
-    const autoPass = backgroundMask ? backgroundMask[index]! === 0 : true;
+    const floodEmpty = floodMask ? floodMask[index]! === 1 : false;
+    const silhouetteEmpty = silhouetteMask ? silhouetteMask[index]! === 1 : false;
+    const autoPass = !(floodEmpty || silhouetteEmpty);
     subjectMask[index] = alphaPass && autoPass ? 255 : 0;
   }
 
@@ -196,6 +290,14 @@ export function getBlockSubjectCoverage(
   canvasHeight: number,
 ): number {
   const { height, subjectMask, width } = matte;
+  const cx = slot.centerX;
+  const cy = slot.centerY;
+  const halfW = slot.width / 2;
+  const halfH = slot.height / 2;
+  const rad = (slot.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
   const startX = Math.max(0, Math.floor(slot.x));
   const startY = Math.max(0, Math.floor(slot.y));
   const endX = Math.min(canvasWidth - 1, Math.ceil(slot.x + slot.width));
@@ -210,6 +312,14 @@ export function getBlockSubjectCoverage(
 
   for (let y = startY; y <= endY; y += 1) {
     for (let x = startX; x <= endX; x += 1) {
+      const px = x + 0.5 - cx;
+      const py = y + 0.5 - cy;
+      const localX = px * cos + py * sin;
+      const localY = -px * sin + py * cos;
+      if (Math.abs(localX) > halfW || Math.abs(localY) > halfH) {
+        continue;
+      }
+
       const sx = Math.min(width - 1, Math.max(0, Math.round((x / canvasWidth) * (width - 1))));
       const sy = Math.min(height - 1, Math.max(0, Math.round((y / canvasHeight) * (height - 1))));
       const index = sy * width + sx;

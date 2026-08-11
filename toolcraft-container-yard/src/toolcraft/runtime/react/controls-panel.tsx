@@ -78,8 +78,11 @@ import type {
 } from "../state/types";
 import {
   isToolcraftImageFile,
+  isToolcraftSourceMediaFile,
+  isToolcraftVideoFile,
   readImportedFile,
   readImportedImageFile,
+  readImportedVideoFile,
 } from "./media-file";
 import { PanelContainer } from "./panel-host";
 import type { PanelPlacement, PanelStateChange } from "./panel-host-types";
@@ -2727,6 +2730,29 @@ export function ControlsPanel({
                           fileName: file.name,
                           mimeType: file.type || "application/octet-stream",
                           position: { x: 0, y: 0 },
+                          sourceTarget: control.target,
+                        },
+                        replaceExisting,
+                        type: "media.import",
+                      });
+                    });
+                    return;
+                  }
+
+                  if (isToolcraftVideoFile(file)) {
+                    void readImportedVideoFile(file, state.canvas.size).then((importedVideo) => {
+                      if (!importedVideo) {
+                        return;
+                      }
+
+                      dispatchCommand({
+                        asset: {
+                          assetKind: "image",
+                          dataUrl: importedVideo.dataUrl,
+                          fileName: file.name,
+                          mimeType: file.type || "video/*",
+                          position: { x: 0, y: 0 },
+                          size: importedVideo.size,
                           sourceTarget: control.target,
                         },
                         replaceExisting,

@@ -384,7 +384,8 @@ export function readSourceMatteSettings(settings: ContainerYardSettings): Source
     enabled: style !== "off",
     minCoverage: settings.matteMinCoverage,
     mode: style === "off" ? "both" : style,
-    tolerance: 24,
+    // Higher tolerance than the original 24 so soft AA on flat white/black empties still clear.
+    tolerance: 42,
   };
 }
 

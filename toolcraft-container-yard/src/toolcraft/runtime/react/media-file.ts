@@ -9,6 +9,12 @@ export type ToolcraftImportedFile = {
   dataUrl: string;
 };
 
+export type ToolcraftImportedVideoFile = {
+  dataUrl: string;
+  durationSeconds: number;
+  size: ToolcraftCanvasSize;
+};
+
 function readFileDataUrl(file: File): Promise<string | null> {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -76,6 +82,33 @@ export function isToolcraftImageFile(file: File): boolean {
   );
 }
 
+export function isToolcraftVideoFile(file: File): boolean {
+  return (
+    file.type.startsWith("video/") ||
+    /\.(mp4|mov|webm|m4v|ogv|mkv)$/i.test(file.name)
+  );
+}
+
+export function isToolcraftSourceMediaFile(file: File): boolean {
+  return isToolcraftImageFile(file) || isToolcraftVideoFile(file);
+}
+
+export function isToolcraftVideoAsset(asset: {
+  dataUrl?: string;
+  mimeType?: string;
+  fileName?: string;
+}): boolean {
+  if (typeof asset.mimeType === "string" && asset.mimeType.startsWith("video/")) {
+    return true;
+  }
+
+  if (typeof asset.fileName === "string" && /\.(mp4|mov|webm|m4v|ogv|mkv)$/i.test(asset.fileName)) {
+    return true;
+  }
+
+  return typeof asset.dataUrl === "string" && asset.dataUrl.startsWith("blob:");
+}
+
 export async function readImportedFile(
   file: File,
 ): Promise<ToolcraftImportedFile | null> {
@@ -98,4 +131,57 @@ export async function readImportedImageFile(
     dataUrl,
     size: (await readImageDataUrlSize(dataUrl)) ?? fallbackSize,
   };
+}
+
+export async function readImportedVideoFile(
+  file: File,
+  fallbackSize: ToolcraftCanvasSize,
+): Promise<ToolcraftImportedVideoFile | null> {
+  if (typeof URL === "undefined" || typeof document === "undefined") {
+    return null;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    let settled = false;
+
+    const finish = (result: ToolcraftImportedVideoFile | null): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      video.removeAttribute("src");
+      video.load();
+      resolve(result);
+    };
+
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+
+    video.addEventListener("loadedmetadata", () => {
+      const width = Math.round(video.videoWidth);
+      const height = Math.round(video.videoHeight);
+      const durationSeconds =
+        Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 4;
+
+      finish({
+        dataUrl: objectUrl,
+        durationSeconds,
+        size:
+          width > 0 && height > 0
+            ? { height, unit: "px", width }
+            : fallbackSize,
+      });
+    });
+
+    video.addEventListener("error", () => {
+      URL.revokeObjectURL(objectUrl);
+      finish(null);
+    });
+
+    video.src = objectUrl;
+  });
 }

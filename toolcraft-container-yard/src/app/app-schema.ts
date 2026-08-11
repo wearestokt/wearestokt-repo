@@ -20,24 +20,30 @@ export const appSchema = defineToolcraft({
     },
   },
   persistence: {
-    include: ["values", "canvas", "panels", "media"],
-    key: "toolcraft:container-yard:state:v1",
+    include: ["values", "canvas", "panels", "media", "timeline"],
+    key: "toolcraft:container-yard:state:v2",
     storage: "localStorage",
-    version: 1,
+    version: 2,
   },
   panels: {
+    timeline: {
+      defaultDurationSeconds: 4,
+      enabled: true,
+      mode: "keyframes",
+    },
     controls: {
       title: "Controls",
       sections: [
         {
           controls: {
             sourceImage: {
-              accept: "image/*",
+              accept: "image/*,video/*",
               assetKind: "image",
               defaultValue: null,
+              description: "Still image or video that drives ASCII block sampling at the playhead.",
               label: false,
               orderRole: "input",
-              performanceReason: "Uploads a reference image for ASCII block sampling.",
+              performanceReason: "Uploads a reference image or video for ASCII block sampling.",
               performanceRole: "responsiveness",
               target: "media.sourceImage",
               type: "fileDrop",
@@ -149,7 +155,7 @@ export const appSchema = defineToolcraft({
             matteStyle: {
               defaultValue: "both",
               description:
-                "Skip blocks over transparent pixels and edge-connected flat backgrounds. Off keeps the full ASCII grid.",
+                "Skip blocks over transparent pixels and flat empty zones (including white/black holes inside silhouettes). Off keeps the full ASCII grid.",
               label: "Subject matte",
               options: [
                 { label: "Both", value: "both" },
@@ -165,8 +171,9 @@ export const appSchema = defineToolcraft({
               visibleWhen: { equals: "dither", target: "yard.layoutType" },
             },
             matteMinCoverage: {
-              defaultValue: 15,
-              description: "Minimum share of subject pixels required inside a block for it to render.",
+              defaultValue: 40,
+              description:
+                "Minimum share of subject pixels required inside a block for it to render. Raise to clear more empty fringe around silhouettes.",
               label: "Min coverage",
               max: 100,
               min: 0,
@@ -430,7 +437,7 @@ export const appSchema = defineToolcraft({
               min: 20,
               orderRole: "primary",
               performanceReason: "Scales non-canvas mask shapes.",
-              performanceRole: "responsiveness",
+              performanceRole: "workload",
               step: 1,
               target: "yard.maskScale",
               type: "slider",
@@ -955,7 +962,7 @@ export const appSchema = defineToolcraft({
         {
           controls: {
             imageFormat: {
-              defaultValue: "svg",
+              defaultValue: "png",
               label: "Format",
               options: [
                 { label: "PNG", value: "png" },
@@ -969,7 +976,7 @@ export const appSchema = defineToolcraft({
               type: "select",
             },
             imageResolution: {
-              defaultValue: "2k",
+              defaultValue: "4k",
               label: "Preset",
               options: [
                 { label: "2K", value: "2k" },
@@ -994,62 +1001,74 @@ export const appSchema = defineToolcraft({
         },
         {
           controls: {
-            exportActionsSvg: {
+            videoFormat: {
+              defaultValue: "mp4",
+              label: "Format",
+              options: [
+                { label: "MP4", value: "mp4" },
+                { label: "WebM", value: "webm" },
+                { label: "MOV", value: "mov" },
+              ],
+              orderRole: "mode",
+              performanceReason: "Chooses alpha video container: MP4 baseline, WebM alpha, or ProRes MOV.",
+              performanceRole: "responsiveness",
+              target: "export.video.format",
+              type: "select",
+            },
+            videoResolution: {
+              defaultValue: "current",
+              label: "Preset",
+              options: [
+                { label: "Current", value: "current" },
+                { label: "4K", value: "4k" },
+              ],
+              orderRole: "detail",
+              performanceReason: "Sets video export pixel dimensions.",
+              performanceRole: "workload",
+              target: "export.video.resolution",
+              type: "select",
+            },
+          },
+          layoutGroups: [
+            {
+              columns: 2,
+              controls: ["videoFormat", "videoResolution"],
+              layout: "inline",
+            },
+          ],
+          title: "Video Export",
+        },
+        {
+          controls: {
+            exportActions: {
               actions: [
                 {
                   icon: "upload-simple",
-                  label: "Export SVG",
-                  value: "export-svg",
+                  label: "Export Video",
+                  value: "export-video",
                   variant: "default",
                 },
-                {
-                  icon: "copy",
-                  label: "Copy SVG",
-                  value: "copy-svg",
-                  variant: "secondary",
-                },
-              ],
-              target: "panel.actions",
-              type: "panelActions",
-              visibleWhen: { equals: "svg", target: "export.image.format" },
-            },
-            exportActionsPng: {
-              actions: [
                 {
                   icon: "upload-simple",
                   label: "Export PNG",
                   value: "export-png",
-                  variant: "default",
-                },
-                {
-                  icon: "copy",
-                  label: "Copy PNG",
-                  value: "copy-png",
                   variant: "secondary",
                 },
-              ],
-              target: "panel.actions",
-              type: "panelActions",
-              visibleWhen: { equals: "png", target: "export.image.format" },
-            },
-            exportActionsJpg: {
-              actions: [
+                {
+                  icon: "upload-simple",
+                  label: "Export SVG",
+                  value: "export-svg",
+                  variant: "secondary",
+                },
                 {
                   icon: "upload-simple",
                   label: "Export JPG",
                   value: "export-jpg",
-                  variant: "default",
-                },
-                {
-                  icon: "copy",
-                  label: "Copy JPG",
-                  value: "copy-jpg",
                   variant: "secondary",
                 },
               ],
               target: "panel.actions",
               type: "panelActions",
-              visibleWhen: { equals: "jpg", target: "export.image.format" },
             },
           },
           title: "Export",

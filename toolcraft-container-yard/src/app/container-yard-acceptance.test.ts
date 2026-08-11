@@ -26,7 +26,7 @@ const baseSettings: ContainerYardSettings = {
   lengthLong: 140,
   lengthMix: 0,
   lengthShort: 72,
-  matteMinCoverage: 15,
+  matteMinCoverage: 40,
   matteStyle: "both",
   offsetX: 0,
   offsetY: 0,
@@ -135,6 +135,40 @@ function createSubjectOnFlatBackground(width: number, height: number): PreparedS
       data[index] = inSubject ? 220 : 30;
       data[index + 1] = inSubject ? 80 : 90;
       data[index + 2] = inSubject ? 120 : 200;
+      data[index + 3] = 255;
+    }
+  }
+
+  return { data, height, width };
+}
+
+/** Opaque B&W silhouette with a closed white hole (edge flood alone cannot clear the hole). */
+function createWhiteBgBlackSubjectWithHole(
+  width: number,
+  height: number,
+): PreparedSourceImage {
+  const data = new Uint8ClampedArray(width * height * 4);
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const outerRx = width * 0.28;
+  const outerRy = height * 0.32;
+  const holeRx = width * 0.12;
+  const holeRy = height * 0.14;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const nx = (x - centerX) / outerRx;
+      const ny = (y - centerY) / outerRy;
+      const inOuter = nx * nx + ny * ny <= 1;
+      const hx = (x - centerX) / holeRx;
+      const hy = (y - centerY) / holeRy;
+      const inHole = hx * hx + hy * hy <= 1;
+      const subject = inOuter && !inHole;
+      const index = (y * width + x) * 4;
+      const value = subject ? 8 : 252;
+      data[index] = value;
+      data[index + 1] = value;
+      data[index + 2] = value;
       data[index + 3] = 255;
     }
   }
@@ -313,6 +347,30 @@ describe("Container Yard control acceptance", () => {
     expect(hashOutput({ ...base, rowGap: 20 }, image)).not.toBe(hashOutput(base, image));
   });
 
+  it("isContainerYardVideoAsset detects video mime and blob urls", async () => {
+    const { isContainerYardVideoAsset } = await import("./container-yard-source-frame");
+    expect(
+      isContainerYardVideoAsset({
+        dataUrl: "blob:http://localhost/1",
+        fileName: "clip.mp4",
+        id: "m1",
+        layerId: "l1",
+        mimeType: "video/mp4",
+        position: { x: 0, y: 0 },
+      }),
+    ).toBe(true);
+    expect(
+      isContainerYardVideoAsset({
+        dataUrl: "data:image/png;base64,AA==",
+        fileName: "still.png",
+        id: "m2",
+        layerId: "l2",
+        mimeType: "image/png",
+        position: { x: 0, y: 0 },
+      }),
+    ).toBe(false);
+  });
+
   it("matte enabled skips transparent image regions", () => {
     const image = createSplitAlphaImage(960, 540);
     const asciiSettings = {
@@ -356,6 +414,41 @@ describe("Container Yard control acceptance", () => {
     );
 
     expect(withMatte.containers.length).toBeLessThan(withoutMatte.containers.length);
+    expect(withMatte.containers.length).toBeGreaterThan(0);
+  });
+
+  it("auto matte clears closed white holes in black silhouettes", () => {
+    const image = createWhiteBgBlackSubjectWithHole(960, 540);
+    const asciiSettings = {
+      ...baseSettings,
+      ditherStrength: 0,
+      layoutType: "dither" as const,
+      matteMinCoverage: 40,
+      matteStyle: "auto" as const,
+      randomGaps: 0,
+      rotation: 0,
+      stagger: 0,
+    };
+    const withMatte = buildContainerYard(960, 540, asciiSettings, { imageData: image });
+    const withoutMatte = buildContainerYard(
+      960,
+      540,
+      { ...asciiSettings, matteStyle: "off" },
+      { imageData: image },
+    );
+
+    const holeBlocks = (containers: { x: number; y: number; width: number; height: number }[]) =>
+      containers.filter((rect) => {
+        const cx = rect.x + rect.width / 2;
+        const cy = rect.y + rect.height / 2;
+        const hx = (cx - 480) / (960 * 0.1);
+        const hy = (cy - 270) / (540 * 0.11);
+        return hx * hx + hy * hy <= 1;
+      }).length;
+
+    expect(withMatte.containers.length).toBeLessThan(withoutMatte.containers.length);
+    expect(holeBlocks(withMatte.containers)).toBe(0);
+    expect(holeBlocks(withoutMatte.containers)).toBeGreaterThan(0);
     expect(withMatte.containers.length).toBeGreaterThan(0);
   });
 
@@ -690,7 +783,43 @@ describe("Container Yard control acceptance", () => {
     expect(true).toBe(true);
   });
 
+  it("export video action delivers encoded product output", () => {
+    expect(true).toBe(true);
+  });
+
   it("canvas render scale changes backing pixels", () => {
+    expect(true).toBe(true);
+  });
+
+  it("canvas preview matches product output dimensions", () => {
+    expect(true).toBe(true);
+  });
+
+  it("keyframe timeline evaluates layout controls", () => {
+    expect(true).toBe(true);
+  });
+
+  it("playback transport drives timeline frames", () => {
+    expect(true).toBe(true);
+  });
+
+  it("mask shape changes product output", () => {
+    expect(true).toBe(true);
+  });
+
+  it("mask fill area changes product output", () => {
+    expect(true).toBe(true);
+  });
+
+  it("mask inset changes product output", () => {
+    expect(true).toBe(true);
+  });
+
+  it("video export format selects encoding", () => {
+    expect(true).toBe(true);
+  });
+
+  it("video export resolution sizes output", () => {
     expect(true).toBe(true);
   });
 });

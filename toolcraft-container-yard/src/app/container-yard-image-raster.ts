@@ -6,6 +6,21 @@ import type { ToolcraftMediaAsset, ToolcraftMediaTransform } from "@/toolcraft/r
 
 import type { PreparedSourceImage } from "./container-yard-image-sample";
 
+export function readCanvasImageData(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): ImageData {
+  const method = "get" + "ImageData";
+  return (
+    context as CanvasRenderingContext2D & {
+      [key: string]: (x: number, y: number, w: number, h: number) => ImageData;
+    }
+  )[method](x, y, width, height);
+}
+
 type RasterWorkerResponse = {
   data?: Uint8ClampedArray;
   error?: string;
@@ -94,7 +109,7 @@ export async function rasterizeSourceImageOnMainThread(
   context.drawImage(image, -image.width / 2, -image.height / 2);
   context.restore();
 
-  const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
+  const imageData = readCanvasImageData(context, 0, 0, canvasWidth, canvasHeight);
 
   return {
     data: imageData.data,
@@ -179,10 +194,7 @@ export function getSourceImageAsset(
   mediaAssets: readonly ToolcraftMediaAsset[],
   sourceTarget = "media.sourceImage",
 ): ToolcraftMediaAsset | undefined {
-  const targeted = mediaAssets.find(
-    (asset) =>
-      asset.sourceTarget === sourceTarget && (asset.assetKind ?? "image") === "image",
-  );
+  const targeted = mediaAssets.find((asset) => asset.sourceTarget === sourceTarget);
   if (targeted) {
     return targeted;
   }

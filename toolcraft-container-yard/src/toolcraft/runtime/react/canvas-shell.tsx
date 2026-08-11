@@ -17,8 +17,11 @@ import {
 import { isToolcraftLayerVisibleInTree } from "./layer-tree";
 import {
   isToolcraftImageFile,
+  isToolcraftSourceMediaFile,
+  isToolcraftVideoFile,
   readImportedFile,
   readImportedImageFile,
+  readImportedVideoFile,
 } from "./media-file";
 import { useToolcraft } from "./use-toolcraft";
 
@@ -417,7 +420,28 @@ export function CanvasShell({
       const targetControl = getCanvasDropTarget(state, uploadedFile);
 
       if (!targetControl) {
-        if (hasFileDropControls || !isToolcraftImageFile(uploadedFile)) {
+        if (hasFileDropControls || !isToolcraftSourceMediaFile(uploadedFile)) {
+          return;
+        }
+
+        if (isToolcraftVideoFile(uploadedFile)) {
+          void readImportedVideoFile(uploadedFile, size).then((importedVideo) => {
+            if (!importedVideo) {
+              return;
+            }
+
+            dispatch({
+              asset: {
+                assetKind: "image",
+                dataUrl: importedVideo.dataUrl,
+                fileName: uploadedFile.name,
+                mimeType: uploadedFile.type || "video/*",
+                position,
+                size: importedVideo.size,
+              },
+              type: "media.import",
+            });
+          });
           return;
         }
 
@@ -457,6 +481,29 @@ export function CanvasShell({
               fileName: uploadedFile.name,
               mimeType: uploadedFile.type || "application/octet-stream",
               position: { x: 0, y: 0 },
+              sourceTarget: targetControl.target,
+            },
+            replaceExisting,
+            type: "media.import",
+          });
+        });
+        return;
+      }
+
+      if (isToolcraftVideoFile(uploadedFile)) {
+        void readImportedVideoFile(uploadedFile, size).then((importedVideo) => {
+          if (!importedVideo) {
+            return;
+          }
+
+          dispatch({
+            asset: {
+              assetKind: "image",
+              dataUrl: importedVideo.dataUrl,
+              fileName: uploadedFile.name,
+              mimeType: uploadedFile.type || "video/*",
+              position,
+              size: importedVideo.size,
               sourceTarget: targetControl.target,
             },
             replaceExisting,

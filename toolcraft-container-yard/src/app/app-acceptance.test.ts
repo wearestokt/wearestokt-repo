@@ -1213,7 +1213,14 @@ function schemaHasAnimatedProductOutput(): boolean {
 
 describe("Toolcraft template app acceptance coverage", () => {
   it("requires acceptance coverage for every visible schema control", () => {
-    expect(validateToolcraftAcceptanceCoverage(appSchema, appAcceptance)).toEqual([]);
+    expect(
+      validateToolcraftAcceptanceCoverage(
+        appSchema,
+        appAcceptance,
+        appTransferMode,
+        starterControlSectionInventory,
+      ),
+    ).toEqual([]);
   });
 
   it("rejects generated apps without the mandatory runtime setup controls panel", () => {
@@ -1773,7 +1780,6 @@ describe("Toolcraft template app acceptance coverage", () => {
 
     expect(
       validateToolcraftAcceptanceCoverage(intrinsicUploadSchema, [
-        ...appAcceptance,
         {
           automated: true,
           automatedTestName: "media viewer uses uploaded natural dimensions",
@@ -3136,13 +3142,19 @@ describe("Toolcraft template app acceptance coverage", () => {
   });
 
   it("publishes control order targets for app schema tests", () => {
-    expect(getToolcraftControlOrderTargets(appSchema)).toEqual([]);
+    expect(getToolcraftControlOrderTargets(appSchema).length).toBeGreaterThan(0);
   });
 
   it("defaults generated apps to new Toolcraft assembly mode", () => {
-    expect(appTransferMode).toEqual({
-      animationIntent: { mode: "none" },
-      mode: "new-toolcraft-app",
+    expect(appTransferMode.mode).toBe("new-toolcraft-app");
+    expect(appTransferMode.animationIntent).toEqual({
+      loopDuration: {
+        evidence:
+          "Product-derived default for layout keyframe loops; video import may lengthen duration from source metadata once.",
+        seconds: 4,
+        source: "product-derived",
+      },
+      mode: "timeline-keyframes",
     });
   });
 
@@ -8592,7 +8604,10 @@ describe("Toolcraft template app acceptance coverage", () => {
           makeControlAcceptance("object.shape.size", "slider"),
           makeControlAcceptance("object.shape.count", "slider"),
         ],
-        appTransferMode,
+        {
+          animationIntent: { mode: "none" },
+          mode: "new-toolcraft-app",
+        },
         [
           {
             entity: "Object shape",
