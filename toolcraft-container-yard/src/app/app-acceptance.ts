@@ -450,6 +450,7 @@ const ACCEPTANCE_TEST_BASENAMES: Readonly<Record<string, string>> = {
   "yard.maskScale": "mask fill area changes product output",
   "yard.maskShape": "mask shape changes product output",
   "yard.matteMinCoverage": "matte min coverage changes product output",
+  "yard.matteInvert": "matte invert changes product output",
   "yard.matteStyle": "matte style changes product output",
   "yard.offset": "offset changes product output",
   "yard.orientation": "orientation changes product output",

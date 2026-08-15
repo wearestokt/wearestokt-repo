@@ -13,6 +13,7 @@ export type ContainerMatteStyle = "off" | ContainerMatteMode;
 export type SourceMatteSettings = {
   alphaThreshold: number;
   enabled: boolean;
+  invert: boolean;
   minCoverage: number;
   mode: ContainerMatteMode;
   tolerance: number;
@@ -277,7 +278,9 @@ export function buildSourceMatteMask(
     const floodEmpty = floodMask ? floodMask[index]! === 1 : false;
     const silhouetteEmpty = silhouetteMask ? silhouetteMask[index]! === 1 : false;
     const autoPass = !(floodEmpty || silhouetteEmpty);
-    subjectMask[index] = alphaPass && autoPass ? 255 : 0;
+    const isSubject = alphaPass && autoPass;
+    // Invert flips subject vs empty so black-on-white and white-on-black both work.
+    subjectMask[index] = (settings.invert ? !isSubject : isSubject) ? 255 : 0;
   }
 
   return { height, subjectMask, width };

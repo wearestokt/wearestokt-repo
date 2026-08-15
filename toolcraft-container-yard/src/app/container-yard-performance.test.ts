@@ -19,6 +19,7 @@ describe("Container Yard performance automated tests", () => {
   it("perf: dither contrast drag stays responsive", () => {});
   it("perf: matte style change stays responsive", () => {});
   it("perf: matte min coverage drag stays responsive", () => {});
+  it("perf: matte invert change stays responsive", () => {});
   it("perf: length short drag stays responsive", () => {});
   it("perf: length long drag stays responsive", () => {});
   it("perf: length mix drag stays responsive", () => {});

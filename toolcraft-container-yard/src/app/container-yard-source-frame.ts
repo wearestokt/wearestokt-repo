@@ -68,7 +68,48 @@ export function revokeCachedSourceVideo(assetId: string): void {
   videoElementCache.delete(assetId);
 }
 
-function waitForVideoSeek(video: HTMLVideoElement, timeSeconds: number): Promise<void> {
+const VIDEO_READY_TIMEOUT_MS = 4000;
+
+function waitForVideoEvent(
+  video: HTMLVideoElement,
+  eventName: "seeked" | "loadedmetadata" | "loadeddata",
+  timeoutMessage: string,
+  timeoutMs = VIDEO_READY_TIMEOUT_MS,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = globalThis.setTimeout(() => {
+      cleanup();
+      if (video.readyState >= 2) {
+        resolve();
+        return;
+      }
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error(timeoutMessage));
+    };
+    const cleanup = () => {
+      globalThis.clearTimeout(timer);
+      video.removeEventListener(eventName, onReady);
+      video.removeEventListener("error", onError);
+    };
+
+    video.addEventListener(eventName, onReady);
+    video.addEventListener("error", onError);
+  });
+}
+
+export async function waitForVideoSeek(
+  video: HTMLVideoElement,
+  timeSeconds: number,
+  timeoutMs = VIDEO_READY_TIMEOUT_MS,
+): Promise<void> {
   const clamped = Math.max(
     0,
     Math.min(
@@ -77,33 +118,31 @@ function waitForVideoSeek(video: HTMLVideoElement, timeSeconds: number): Promise
     ),
   );
 
-  if (Math.abs(video.currentTime - clamped) < 0.001 && video.readyState >= 2) {
-    return Promise.resolve();
+  if (Math.abs(video.currentTime - clamped) < 0.001) {
+    if (video.readyState >= 2) {
+      return;
+    }
+    await waitForVideoEvent(
+      video,
+      "loadeddata",
+      "Timed out waiting for the source video frame.",
+      timeoutMs,
+    );
+    return;
   }
 
-  return new Promise((resolve, reject) => {
-    const onSeeked = () => {
-      cleanup();
-      resolve();
-    };
-    const onError = () => {
-      cleanup();
-      reject(new Error("Container Yard failed to seek source video."));
-    };
-    const cleanup = () => {
-      video.removeEventListener("seeked", onSeeked);
-      video.removeEventListener("error", onError);
-    };
-
-    video.addEventListener("seeked", onSeeked);
-    video.addEventListener("error", onError);
-    try {
-      video.currentTime = clamped;
-    } catch (error) {
-      cleanup();
-      reject(error instanceof Error ? error : new Error(String(error)));
-    }
-  });
+  const seeked = waitForVideoEvent(
+    video,
+    "seeked",
+    "Timed out seeking the source video.",
+    timeoutMs,
+  );
+  try {
+    video.currentTime = clamped;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error(String(error));
+  }
+  await seeked;
 }
 
 export function rasterizeVideoElementFrame(
@@ -154,22 +193,11 @@ export async function rasterizeVideoFrameAtTime(
   const video = getOrCreateSourceVideoElement(asset);
 
   if (video.readyState < 1) {
-    await new Promise<void>((resolve, reject) => {
-      const onLoaded = () => {
-        cleanup();
-        resolve();
-      };
-      const onError = () => {
-        cleanup();
-        reject(new Error("Container Yard failed to load source video."));
-      };
-      const cleanup = () => {
-        video.removeEventListener("loadedmetadata", onLoaded);
-        video.removeEventListener("error", onError);
-      };
-      video.addEventListener("loadedmetadata", onLoaded);
-      video.addEventListener("error", onError);
-    });
+    await waitForVideoEvent(
+      video,
+      "loadedmetadata",
+      "Timed out loading the source video.",
+    );
   }
 
   await waitForVideoSeek(video, timeSeconds);
@@ -203,22 +231,11 @@ export async function readVideoDurationSeconds(asset: ToolcraftMediaAsset): Prom
     return video.duration;
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const onLoaded = () => {
-      cleanup();
-      resolve();
-    };
-    const onError = () => {
-      cleanup();
-      reject(new Error("Container Yard failed to read video duration."));
-    };
-    const cleanup = () => {
-      video.removeEventListener("loadedmetadata", onLoaded);
-      video.removeEventListener("error", onError);
-    };
-    video.addEventListener("loadedmetadata", onLoaded);
-    video.addEventListener("error", onError);
-  });
+  await waitForVideoEvent(
+    video,
+    "loadedmetadata",
+    "Timed out reading source video duration.",
+  );
 
   return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : null;
 }

@@ -68,9 +68,11 @@ export async function handleContainerYardPanelAction({
 
   if (action.value === "export-video") {
     reportProgress(0.02);
+    let peakProgress = 0.02;
     try {
       await downloadContainerYardVideo(state, (ratio) => {
-        reportProgress(Math.min(0.99, Math.max(0.02, ratio)));
+        peakProgress = Math.max(peakProgress, Math.min(0.99, Math.max(0.02, ratio)));
+        reportProgress(peakProgress);
       });
       reportProgress(1);
     } catch (error) {

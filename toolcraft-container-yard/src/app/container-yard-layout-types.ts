@@ -44,6 +44,7 @@ export type ContainerYardSettings = {
   lengthMix: number;
   lengthShort: number;
   matteMinCoverage: number;
+  matteInvert: boolean;
   matteStyle: ContainerMatteStyle;
   offsetX: number;
   offsetY: number;
@@ -105,5 +106,8 @@ export type ContainerYardOutput = {
 
 export type BuildContainerYardOptions = {
   imageData?: import("./container-yard-image-sample").PreparedSourceImage | null;
+  layoutScaleX?: number;
+  layoutScaleY?: number;
   matteMask?: import("./container-yard-source-matte").PreparedSourceMatte | null;
+  sampleImageColors?: boolean;
 };

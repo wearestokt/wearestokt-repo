@@ -309,6 +309,17 @@ test("browser perf: matte min coverage drag stays responsive", async ({ page }) 
   await measureSliderDrag(page, "Min coverage", "yard-matte-min-coverage-drag");
 });
 
+test("browser perf: matte invert change stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  await enableASCII(page);
+  await uploadSourceImage(page, 1920, 1080);
+  const field = await getToolcraftFieldByLabel(page, "Invert mask");
+  const result = await measureToolcraftInteraction(page, async () => {
+    await field.getByRole("switch").click();
+  });
+  expectToolcraftScenarioPerformanceBudget(result, appPerformance, "yard-matte-invert-change");
+});
+
 test("browser perf: length short drag stays responsive", async ({ page }) => {
   await gotoYard(page);
   await measureSliderDrag(page, "Length short", "yard-length-short-drag");

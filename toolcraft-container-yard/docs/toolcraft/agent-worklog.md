@@ -42,6 +42,103 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Skipped checks: full browser perf — local matte sampling change only.
 - Risks: High-contrast photos with bright borders may cut more aggressively; raise Min coverage further if fringe remains.
 
+### Iteration 3 — Invert matte for ASCII polarity
+
+- Request: Black-on-white and white-on-black sources produced the same ASCII cutout; need Invert mask toggle.
+- Task type: schema + matte behavior (Tier 2).
+- User-visible result: App Mode shows Invert mask under Min coverage; toggling flips subject vs empty in the same matte. Source upload lives in Source so App Mode stays within the section control limit.
+- Source/reference checked: `container-yard-source-matte.ts` subject mask build; user polarity complaint.
+- Reference inputs: User black-on-white and white-on-black ASCII source images.
+- Docs/contracts read: `workflow.md`, `schema-reference.md`, `component-rules.md`.
+- Contract rules applied: `controls-product-coverage`, `acceptance-product-observable`, `performance-coverage-levels`.
+- Decision: Add `yard.matteInvert` switch (default off); invert final subject mask after alpha/auto detection so one matte path serves both polarities.
+- Alternatives rejected: Auto-only polarity detection without manual override; separate invert for dither tones only (`ditherInvert` already exists and does not flip placement).
+- State/output mapping: `yard.matteInvert` → `SourceMatteSettings.invert` → flipped `subjectMask` → `shouldSkipBlockForMatte`.
+- Files changed: schema, matte, math, renderer, layout types, acceptance/perf/e2e, worklog.
+- Verification: `pnpm verify:quick` (docs/integrity + 376 unit tests); invert unit coverage for subject/empty flip.
+- Skipped checks: Playwright browser acceptance — Chromium binary missing locally (`playwright install` needed); full perf not required for this control-only pass.
+- Risks: Invert with matte Off has no effect (expected); users with saved sessions keep Invert false until toggled.
+
+### Iteration 4 — Unstick Export Video
+
+- Request: Export Video always froze while encoding.
+- Task type: export bugfix (Tier 3).
+- User-visible result: Default MP4 export uses the browser encoder first; stalled ffmpeg/WebCodecs/MediaRecorder/source-seek paths time out and alert instead of hanging.
+- Source/reference checked: `container-yard-video-export.ts` MP4 path; `waitForVideoSeek` missing seeked timeout.
+- Docs/contracts read: `workflow.md`, `component-rules.md`, `acceptance-testing.md`.
+- Contract rules applied: `output-export-required`.
+- Decision: Prefer MediaRecorder for MP4 (ffmpeg.wasm last); timeout encoder flush, recorder stop, ffmpeg load/exec, and source video seeks; yield between frames so progress can update.
+- Alternatives rejected: Keep ffmpeg-first MP4 (CDN/WASM freeze); leave seeked wait unbounded.
+- State/output mapping: Export Video → native MP4 when supported, otherwise timed ffmpeg/WebM fallbacks.
+- Files changed: `container-yard-video-export.ts`, `container-yard-source-frame.ts`, acceptance tests, worklog.
+- Verification: `pnpm verify:quick`.
+- Skipped checks: Full browser perf; Playwright Chromium not required for this encoder-order/timeout pass.
+- Risks: Safari/Firefox MP4 MIME support varies; MOV still needs ffmpeg and can fail with a timeout alert if the WASM core is blocked.
+
+### Iteration 5 — Export Video percent and time estimate
+
+- Request: Show where video export is so it does not look frozen.
+- Task type: sticky footer progress UI (Tier 1).
+- User-visible result: While Export Video runs, the sticky footer shows percent done and remaining time (for example `42% · 1m 10s left`) above the actions, plus the existing accent bar.
+- Source/reference checked: sticky footer accent indicator in `panel-surface.tsx`; `reportProgress` 0..1 contract.
+- Docs/contracts read: `workflow.md`, `component-rules.md`.
+- Contract rules applied: `output-export-required`.
+- Decision: Keep determinate `reportProgress`; derive remaining time from elapsed vs percent; never let fallback encoders jump the bar backward.
+- Alternatives rejected: Canvas overlay (product canvas cannot host app UI); changing Export Video button label (breaks footer action identity).
+- State/output mapping: frame/encode `onProgress` → monotonic `reportProgress` → footer `%` and ETA.
+- Files changed: `panel-surface.tsx`, `container-yard-panel-actions.ts`, manifest hash, worklog.
+- Verification: integrity hash refresh for the local runtime patch.
+- Skipped checks: Full browser perf; progress chrome only.
+- Risks: Early ETA is coarse until ~5% progress; fallback encoder switches keep the bar from going backward so remaining time can pause until the next advance.
+
+### Iteration 6 — Timestamped MP4, stable cell color, higher bitrate
+
+- Request: 15s export became 6 minutes; container colors flickered every frame; export looked very low quality.
+- Task type: export + color assignment bugfix (Tier 3).
+- User-visible result: MP4 uses WebCodecs timestamps so timeline duration is preserved; Random/Palette colors stay locked to grid cells and sampled pixels; encode bitrate raised.
+- Source/reference checked: MediaRecorder wall-clock pacing; `resolveContainerColor` sequential rng; luminance palette bins.
+- Docs/contracts read: `workflow.md`, `component-rules.md`.
+- Contract rules applied: `output-export-required`.
+- Decision: MP4 prefers VideoEncoder + mp4-muxer; Random hashes by col/row; Palette nearest-RGB then seed shuffle; bitrate at least 16 Mbps.
+- Alternatives rejected: Realtime MediaRecorder (ASCII cannot render 24fps, so duration stretches); keep luminance bins (flicker on moving samples).
+- State/output mapping: timeline duration → frame timestamps; slot col/row + sampled RGB → stable color; bitrate helper → encoder config.
+- Files changed: `container-yard-video-export.ts`, `container-yard-math.ts`, `container-yard-dither.ts`, tests, worklog, `mp4-muxer` dependency.
+- Verification: targeted acceptance for spatial color lock; typecheck when available.
+- Skipped checks: Full browser perf; encode-path correctness over budget suite.
+- Risks: Some browsers lack AVC WebCodecs and fall back to ffmpeg or MediaRecorder; last-resort MediaRecorder can still stretch duration.
+
+### Iteration 7 — Grid-locked cell colors on video
+
+- Request: Exported heron clip looks like color noise; each container cell should keep one color for the whole video.
+- Task type: ASCII color assignment (Tier 2).
+- User-visible result: Imported video only cuts the silhouette. Cell fill comes from the Color Pattern grid (row/col + seed) and does not resample the moving footage.
+- Source/reference checked: user export `container-yard (3).mp4` (15s, 3840x2160, 24fps); frames show four-color mosaic reshuffling on the heron.
+- Docs/contracts read: `workflow.md`.
+- Contract rules applied: `acceptance-product-observable`.
+- Decision: `lockCellColorsToGrid` when the source is video; Image Mix still samples still photos.
+- Alternatives rejected: Keep per-frame palette sampling (that is the noise); hide Image Mix (still photos still need it).
+- State/output mapping: video frame → matte only; `slot.row`/`slot.col` + seed → cell color for every frame.
+- Files changed: layout types, math, renderer, schema Image Mix description, acceptance test, worklog.
+- Verification: unit test that different interior fills keep the same cell colors when locked.
+- Skipped checks: Full browser perf.
+- Risks: Video exports ignore Image Mix by design; still-image ASCII can still sample photos.
+
+### Iteration 8 — Stop silhouette video from resampling fill
+
+- Request: `container-yard (4).mp4` still has mosaic colors swapping at fixed canvas cells.
+- Task type: ASCII color assignment (Tier 2).
+- User-visible result: Silhouette and video ASCII keep Color Pattern fills. Image Mix samples still photos only when Subject matte is Off.
+- Source/reference checked: user export `container-yard (4).mp4`; prior lock flag still allowed sampling when video detection missed or Image Mix was on.
+- Docs/contracts read: `workflow.md`.
+- Contract rules applied: `acceptance-product-observable`, `workflow-required`.
+- Decision: Opt-in `sampleImageColors`; default fill is spatial grid hash in unscaled canvas cells; Random Gaps on ASCII uses cell hash instead of sequential RNG; `patternNoise` includes row.
+- Alternatives rejected: Keep video-detect lock only (false negatives still sampled each frame).
+- State/output mapping: matte on or video source → fill from grid col/row + seed; Image Mix + matte Off + still image → sampled fill.
+- Files changed: math, layout types, ascii layout, renderer, schema Image Mix copy, acceptance test, worklog.
+- Verification: targeted `container-yard-acceptance.test.ts`.
+- Skipped checks: Full browser perf; not a first-working or perf complaint pass.
+- Risks: Photo-texture ASCII now requires Subject matte Off; existing sessions with matte Both and Image Mix > 0 will stop sampling until matte is Off.
+
 ## Decisions
 
 ### Renderer
@@ -64,13 +161,13 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 
 ### Controls
 
-- Decision: Existing yard sections + Video Export; video/image fileDrop in ASCII mode.
-- Reason: Product coverage for layout/look/export.
+- Decision: Existing yard sections + Source (ASCII upload) + Video Export; Invert mask under App Mode matte controls.
+- Reason: Product coverage for layout/look/export; invert polarity without auto-detecting source ink.
 - Evidence: `starterControlSectionInventory`, schema sections.
 
 ### Export
 
-- Decision: Export Video primary; PNG/SVG/JPG secondary. Format options: MP4 (browser baseline default per Toolcraft contract), WebM alpha (keyed), MOV ProRes 4444 (lazy ffmpeg). WebM/MOV honor Background Include for alpha; MP4 stays opaque.
+- Decision: Export Video primary; PNG/SVG/JPG secondary. Format options: MP4 (WebCodecs + mp4-muxer timestamps, ffmpeg then MediaRecorder fallback), WebM alpha (WebCodecs then MediaRecorder), MOV ProRes 4444 (lazy ffmpeg with timeouts). High bitrate (~16 Mbps+). WebM/MOV honor Background Include for alpha; MP4 stays opaque.
 - Reason: Client compositing deliverable plus contract-safe defaults.
 - Evidence: sticky `panel.actions`, `container-yard-video-export.ts`.
 

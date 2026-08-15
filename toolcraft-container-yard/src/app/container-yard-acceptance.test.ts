@@ -26,6 +26,7 @@ const baseSettings: ContainerYardSettings = {
   lengthLong: 140,
   lengthMix: 0,
   lengthShort: 72,
+  matteInvert: false,
   matteMinCoverage: 40,
   matteStyle: "both",
   offsetX: 0,
@@ -60,7 +61,13 @@ function hashOutput(
   settings: ContainerYardSettings,
   imageData?: PreparedSourceImage | null,
 ): string {
-  const output = buildContainerYard(960, 540, settings, { imageData: imageData ?? null });
+  const output = buildContainerYard(960, 540, settings, {
+    imageData: imageData ?? null,
+    sampleImageColors:
+      imageData != null &&
+      settings.layoutType === "dither" &&
+      settings.ditherStrength > 0,
+  });
   return output.containers.map((rect) => `${rect.x},${rect.y},${rect.color}`).join("|");
 }
 
@@ -371,6 +378,34 @@ describe("Container Yard control acceptance", () => {
     ).toBe(false);
   });
 
+  it("waitForVideoSeek times out instead of hanging when seeked never fires", async () => {
+    const { waitForVideoSeek } = await import("./container-yard-source-frame");
+    const video = new EventTarget() as EventTarget & {
+      currentTime: number;
+      duration: number;
+      readyState: number;
+    };
+    video.currentTime = 0;
+    video.duration = 4;
+    video.readyState = 1;
+
+    await expect(waitForVideoSeek(video as HTMLVideoElement, 0, 40)).rejects.toThrow(/Timed out/);
+  });
+
+  it("waitForVideoSeek resolves immediately when the playhead is already ready", async () => {
+    const { waitForVideoSeek } = await import("./container-yard-source-frame");
+    const video = new EventTarget() as EventTarget & {
+      currentTime: number;
+      duration: number;
+      readyState: number;
+    };
+    video.currentTime = 0;
+    video.duration = 4;
+    video.readyState = 2;
+
+    await expect(waitForVideoSeek(video as HTMLVideoElement, 0, 40)).resolves.toBeUndefined();
+  });
+
   it("matte enabled skips transparent image regions", () => {
     const image = createSplitAlphaImage(960, 540);
     const asciiSettings = {
@@ -452,6 +487,45 @@ describe("Container Yard control acceptance", () => {
     expect(withMatte.containers.length).toBeGreaterThan(0);
   });
 
+  it("matte invert flips subject vs empty for the same silhouette", () => {
+    const image = createWhiteBgBlackSubjectWithHole(960, 540);
+    const asciiSettings = {
+      ...baseSettings,
+      ditherStrength: 0,
+      layoutType: "dither" as const,
+      matteInvert: false,
+      matteMinCoverage: 40,
+      matteStyle: "auto" as const,
+      randomGaps: 0,
+      rotation: 0,
+      stagger: 0,
+    };
+    const normal = buildContainerYard(960, 540, asciiSettings, { imageData: image });
+    const inverted = buildContainerYard(
+      960,
+      540,
+      { ...asciiSettings, matteInvert: true },
+      { imageData: image },
+    );
+
+    expect(inverted.containers.length).not.toBe(normal.containers.length);
+    expect(inverted.containers.length).toBeGreaterThan(0);
+    expect(normal.containers.length).toBeGreaterThan(0);
+
+    const holeBlocks = (containers: { x: number; y: number; width: number; height: number }[]) =>
+      containers.filter((rect) => {
+        const cx = rect.x + rect.width / 2;
+        const cy = rect.y + rect.height / 2;
+        const hx = (cx - 480) / (960 * 0.1);
+        const hy = (cy - 270) / (540 * 0.11);
+        return hx * hx + hy * hy <= 1;
+      }).length;
+
+    // Default keeps the white hole empty; invert fills the hole (and clears the ring).
+    expect(holeBlocks(normal.containers)).toBe(0);
+    expect(holeBlocks(inverted.containers)).toBeGreaterThan(0);
+  });
+
   it("matte style changes product output", () => {
     const image = createSubjectOnFlatBackground(960, 540);
     const settings = {
@@ -460,6 +534,19 @@ describe("Container Yard control acceptance", () => {
     };
     expect(hashOutput({ ...settings, matteStyle: "alpha" }, image)).not.toBe(
       hashOutput({ ...settings, matteStyle: "auto" }, image),
+    );
+  });
+
+  it("matte invert changes product output", () => {
+    const image = createWhiteBgBlackSubjectWithHole(960, 540);
+    const settings = {
+      ...baseSettings,
+      ditherStrength: 0,
+      layoutType: "dither" as const,
+      matteStyle: "auto" as const,
+    };
+    expect(hashOutput({ ...settings, matteInvert: true }, image)).not.toBe(
+      hashOutput({ ...settings, matteInvert: false }, image),
     );
   });
 
@@ -543,6 +630,48 @@ describe("Container Yard control acceptance", () => {
 
   it("color count changes product output", () => {
     expect(hashOutput({ ...baseSettings, colorCount: 2 })).not.toBe(hashOutput(baseSettings));
+  });
+
+  it("locked grid colors ignore per-frame image sampling", () => {
+    const blackBird = createBlackSilhouetteImage(960, 540);
+    const data = new Uint8ClampedArray(blackBird.data);
+    for (let index = 0; index < data.length; index += 4) {
+      if (data[index + 3] === 255) {
+        data[index] = 240;
+        data[index + 1] = 40;
+        data[index + 2] = 40;
+      }
+    }
+    const redBird = { data, height: 540, width: 960 };
+    const settings: ContainerYardSettings = {
+      ...baseSettings,
+      colorMode: "random",
+      ditherAlgorithm: "palette",
+      ditherStrength: 100,
+      layoutType: "dither",
+      matteStyle: "alpha",
+      randomGaps: 0,
+      seed: 42,
+    };
+    const blackOutput = buildContainerYard(960, 540, settings, {
+      imageData: blackBird,
+    });
+    const redOutput = buildContainerYard(960, 540, settings, {
+      imageData: redBird,
+    });
+    const blackByCell = new Map(
+      blackOutput.containers.map((rect) => [
+        `${Math.round(rect.x)}:${Math.round(rect.y)}`,
+        rect.color,
+      ]),
+    );
+
+    expect(redOutput.containers.length).toBe(blackOutput.containers.length);
+    expect(
+      redOutput.containers.every(
+        (rect) => blackByCell.get(`${Math.round(rect.x)}:${Math.round(rect.y)}`) === rect.color,
+      ),
+    ).toBe(true);
   });
 
   it("ascii palette seed changes product output", () => {

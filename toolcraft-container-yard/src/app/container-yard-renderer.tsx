@@ -155,7 +155,8 @@ export function readContainerYardSettingsFromValues(
     lengthLong: asNumber(values["yard.lengthLong"], 140),
     lengthMix: asNumber(values["yard.lengthMix"], 0),
     lengthShort: asNumber(values["yard.lengthShort"], 72),
-    matteMinCoverage: asNumber(values["yard.matteMinCoverage"], 15),
+    matteInvert: values["yard.matteInvert"] === true,
+    matteMinCoverage: asNumber(values["yard.matteMinCoverage"], 40),
     matteStyle: asString<ContainerMatteStyle>(
       normalizeMatteStyle(values["yard.matteStyle"]),
       ["off", "alpha", "auto", "both"],
@@ -280,10 +281,20 @@ export function buildContainerYardOutputForState(
   const scaleX = width / canvasWidth;
   const scaleY = height / canvasHeight;
   const settings = readContainerYardSettings(state, timeSeconds);
+  const sourceAsset = getSourceImageAsset(state.mediaAssets);
+  const sampleImageColors =
+    Boolean(imageData) &&
+    isContainerYardDitherActive(settings) &&
+    settings.ditherStrength > 0 &&
+    normalizeMatteStyle(settings.matteStyle) === "off" &&
+    !isContainerYardVideoAsset(sourceAsset);
 
   const build = (targetSettings: ContainerYardSettings) =>
     buildContainerYard(width, height, targetSettings, {
       imageData: isContainerYardDitherActive(targetSettings) ? imageData ?? null : null,
+      layoutScaleX: scaleX,
+      layoutScaleY: scaleY,
+      sampleImageColors,
     });
 
   if (scaleX === 1 && scaleY === 1) {

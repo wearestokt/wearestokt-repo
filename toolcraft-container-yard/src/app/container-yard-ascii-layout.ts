@@ -27,6 +27,7 @@ export function buildAsciiBlockLayout(
   settings: ContainerYardSettings,
   rng: () => number,
 ): ContainerLayoutSlot[] {
+  void rng;
   const scaled = applyGlobalScale(settings);
   const blockWidth =
     scaled.orientation === "vertical" ? scaled.containerWidth : scaled.lengthShort;
@@ -55,8 +56,13 @@ export function buildAsciiBlockLayout(
     for (let col = 0; col < cols; col += 1) {
       const colStagger = scaled.layout === "columns" && col % 2 === 1 ? staggerShift : 0;
 
-      if (scaled.randomGaps > 0 && rng() * 100 < scaled.randomGaps) {
-        continue;
+      if (scaled.randomGaps > 0) {
+        let gapHash = Math.imul(col ^ scaled.seed, 374761393);
+        gapHash = Math.imul(gapHash ^ row, 668265263);
+        gapHash = (gapHash ^ (gapHash >>> 16)) >>> 0;
+        if ((gapHash / 4294967296) * 100 < scaled.randomGaps) {
+          continue;
+        }
       }
 
       const x = originX + col * pitchX + rowStagger;

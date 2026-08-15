@@ -8,7 +8,6 @@ import {
   applyToneCurveToColor,
   sampleRectAverageColor,
   sampleRectAverageLuminance,
-  sampleRectCenterColor,
   type PreparedSourceImage,
 } from "./container-yard-image-sample";
 
@@ -62,10 +61,7 @@ export function buildDitherImageColors(
   const algorithm = normalizeDitherAlgorithm(settings.algorithm);
 
   return slots.map((slot) => {
-    const sampleColor =
-      algorithm === "blocks" || algorithm === "palette"
-        ? sampleRectCenterColor(image, slot, canvasWidth, canvasHeight)
-        : sampleRectAverageColor(image, slot, canvasWidth, canvasHeight);
+    const sampleColor = sampleRectAverageColor(image, slot, canvasWidth, canvasHeight);
     const adjusted = applyToneCurveToColor(
       sampleColor,
       settings.contrast,
@@ -99,12 +95,6 @@ export function buildDitherImageColors(
       }
     }
   });
-}
-
-function blockSeedNoise(cellX: number, cellY: number, seed: number): number {
-  let hash = Math.imul(cellX ^ seed, 374761393);
-  hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
-  return ((hash ^ (hash >>> 16)) >>> 0) / 4294967296;
 }
 
 function relativeLuminance(hex: string): number {
@@ -143,6 +133,7 @@ function seededPaletteColor(
   slot: ContainerLayoutSlot,
   seed: number,
 ): string {
+  void slot;
   if (palette.length === 0) {
     return hex;
   }
@@ -156,16 +147,21 @@ function seededPaletteColor(
     .sort((left, right) => left.luminance - right.luminance);
   const permutation = buildPalettePermutation(ordered.length, seed);
   const shuffledPalette = permutation.map((index) => ordered[index]!.color);
+  const source = parseHex(hex);
+  let nearestIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
 
-  const luminance = relativeLuminance(hex);
-  const noise = (blockSeedNoise(slot.col, slot.row, seed) - 0.5) * 0.16;
-  const adjusted = Math.min(0.999, Math.max(0, luminance + noise));
-  const bin = Math.min(
-    shuffledPalette.length - 1,
-    Math.floor(adjusted * shuffledPalette.length),
-  );
+  for (let index = 0; index < ordered.length; index += 1) {
+    const target = parseHex(ordered[index]!.color);
+    const distance =
+      (source.r - target.r) ** 2 + (source.g - target.g) ** 2 + (source.b - target.b) ** 2;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      nearestIndex = index;
+    }
+  }
 
-  return shuffledPalette[bin] ?? nearestPaletteColor(hex, palette);
+  return shuffledPalette[nearestIndex] ?? nearestPaletteColor(hex, palette);
 }
 
 function nearestPaletteColor(hex: string, palette: readonly string[]): string {

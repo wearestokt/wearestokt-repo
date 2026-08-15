@@ -773,6 +773,15 @@ test("browser: matte min coverage changes product output", async ({ page }) => {
   }, canvasObservable);
 });
 
+test("browser: matte invert changes product output", async ({ page }) => {
+  await page.goto("/");
+  await prepareASCIISource(page);
+  await expectToolcraftProductObservableToChange(page, async () => {
+    const field = await getSectionFieldByLabel(page, "App Mode", "Invert mask");
+    await field.getByRole("switch").click();
+  }, canvasObservable);
+});
+
 test("browser: local settings persist after browser reload", async ({ page }) => {
   await page.goto("/");
   const containField = await getSectionFieldByLabel(page, "Grid Layout", "Contain");

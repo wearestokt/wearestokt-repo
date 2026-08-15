@@ -1,6 +1,11 @@
 /**
  * Export animated Container Yard frames as MP4 / alpha WebM / ProRes MOV.
  *
+ * Preference order for MP4:
+ * 1. WebCodecs VideoEncoder + mp4-muxer (timeline timestamps, high bitrate)
+ * 2. ffmpeg.wasm
+ * 3. MediaRecorder last (wall-clock duration; avoid for ASCII)
+ *
  * Preference order for WebM:
  * 1. WebCodecs VideoEncoder + webm-muxer (timestamp-accurate, alpha when supported)
  * 2. MediaRecorder + canvas.captureStream(0) + requestFrame (browser baseline)
@@ -15,7 +20,8 @@ import {
   shouldIncludeToolcraftPreviewBackground,
 } from "@/toolcraft/runtime";
 import type { ToolcraftState } from "@/toolcraft/runtime";
-import { Muxer, ArrayBufferTarget } from "webm-muxer";
+import { Muxer as WebmMuxer, ArrayBufferTarget as WebmArrayBufferTarget } from "webm-muxer";
+import { Muxer as Mp4Muxer, ArrayBufferTarget as Mp4ArrayBufferTarget } from "mp4-muxer";
 import { downloadBlob } from "./container-yard-export";
 import { appSchema } from "./app-schema";
 import { getSourceImageAsset } from "./container-yard-image-raster";
@@ -29,8 +35,47 @@ import {
 } from "./container-yard-renderer";
 
 const EXPORT_FPS = 24;
+const ENCODER_STALL_TIMEOUT_MS = 20_000;
+const FFMPEG_LOAD_TIMEOUT_MS = 25_000;
+const RECORDER_STOP_TIMEOUT_MS = 8_000;
 
 export type ContainerYardVideoFormat = "webm" | "mov" | "mp4";
+
+function exportVideoBitrate(width: number, height: number): number {
+  return Math.min(50_000_000, Math.max(16_000_000, width * height * 10));
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timer = 0;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = window.setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 let ffmpegInstance: FFmpeg | null = null;
 let ffmpegLoadPromise: Promise<FFmpeg> | null = null;
@@ -59,10 +104,11 @@ function createExportCanvas(width: number, height: number): {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const context = canvas.getContext("2d", { alpha: true, willReadFrequently: true });
+  const context = canvas.getContext("2d", { alpha: true });
   if (!context) {
     throw new Error("Container Yard video export requires Canvas 2D.");
   }
+  context.imageSmoothingEnabled = false;
   return { canvas, context };
 }
 
@@ -157,7 +203,7 @@ async function pickWebCodecsPlan(
       codec: candidate.codec,
       width,
       height,
-      bitrate: Math.max(2_000_000, width * height * 4),
+      bitrate: exportVideoBitrate(width, height),
       framerate: EXPORT_FPS,
       latencyMode: "quality",
       ...(candidate.alpha ? { alpha: "keep" as AlphaOption } : {}),
@@ -188,8 +234,8 @@ async function encodeWebmWithVideoEncoder(
   const backgroundHex = readContainerYardBackgroundHex(state, 0);
   const { canvas, context } = createExportCanvas(width, height);
 
-  const target = new ArrayBufferTarget();
-  const muxer = new Muxer({
+  const target = new WebmArrayBufferTarget();
+  const muxer = new WebmMuxer({
     target,
     video: {
       codec: plan.muxerCodec,
@@ -222,7 +268,7 @@ async function encodeWebmWithVideoEncoder(
     codec: plan.codec,
     width,
     height,
-    bitrate: Math.max(2_000_000, width * height * 4),
+    bitrate: exportVideoBitrate(width, height),
     framerate: EXPORT_FPS,
     latencyMode: "quality",
     ...(plan.alpha && !encodeWithBackground ? { alpha: "keep" as AlphaOption } : {}),
@@ -241,13 +287,12 @@ async function encodeWebmWithVideoEncoder(
         context,
       );
 
+      const queueWaitDeadline = Date.now() + ENCODER_STALL_TIMEOUT_MS;
       while (encoder.encodeQueueSize > 4) {
-        await Promise.race([
-          encodingFailed,
-          new Promise<void>((resolve) => {
-            window.setTimeout(resolve, 4);
-          }),
-        ]);
+        if (Date.now() > queueWaitDeadline) {
+          throw new Error("VideoEncoder stalled while encoding Container Yard video.");
+        }
+        await Promise.race([encodingFailed, delay(8)]);
       }
 
       const frame = new VideoFrame(canvas, {
@@ -262,9 +307,14 @@ async function encodeWebmWithVideoEncoder(
         frame.close();
       }
       onProgress(0.05 + (frameIndex / frameCount) * 0.75);
+      await yieldToUi();
     }
 
-    await Promise.race([encoder.flush(), encodingFailed]);
+    await withTimeout(
+      Promise.race([encoder.flush(), encodingFailed]),
+      ENCODER_STALL_TIMEOUT_MS,
+      "VideoEncoder flush stalled while encoding Container Yard video.",
+    );
   } finally {
     if (encoder.state !== "closed") {
       encoder.close();
@@ -274,6 +324,136 @@ async function encodeWebmWithVideoEncoder(
   muxer.finalize();
   onProgress(0.9);
   return new Blob([target.buffer], { type: "video/webm" });
+}
+
+async function pickAvcPlan(width: number, height: number): Promise<string | null> {
+  if (typeof VideoEncoder === "undefined" || typeof VideoEncoder.isConfigSupported !== "function") {
+    return null;
+  }
+
+  const candidates = ["avc1.640028", "avc1.4d0028", "avc1.42001f"];
+  const bitrate = exportVideoBitrate(width, height);
+
+  for (const codec of candidates) {
+    const support = await VideoEncoder.isConfigSupported({
+      codec,
+      width,
+      height,
+      bitrate,
+      framerate: EXPORT_FPS,
+      latencyMode: "quality",
+    });
+    if (support.supported) {
+      return codec;
+    }
+  }
+
+  return null;
+}
+
+async function encodeMp4WithVideoEncoder(
+  state: ToolcraftState,
+  width: number,
+  height: number,
+  includeBackground: boolean,
+  onProgress: (ratio: number) => void,
+): Promise<Blob> {
+  const codec = await pickAvcPlan(width, height);
+  if (!codec) {
+    throw new Error("WebCodecs VideoEncoder has no supported MP4/AVC config in this browser.");
+  }
+
+  const { durationSeconds, frameCount } = getExportTimeline(state);
+  const backgroundHex = readContainerYardBackgroundHex(state, 0);
+  const { canvas, context } = createExportCanvas(width, height);
+  const target = new Mp4ArrayBufferTarget();
+  const muxer = new Mp4Muxer({
+    fastStart: "in-memory",
+    firstTimestampBehavior: "offset",
+    target,
+    video: {
+      codec: "avc",
+      height,
+      width,
+    },
+  });
+
+  let rejectEncoding: ((error: Error) => void) | null = null;
+  const encodingFailed = new Promise<never>((_, reject) => {
+    rejectEncoding = reject;
+  });
+
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => {
+      muxer.addVideoChunk(chunk, meta);
+    },
+    error: (error) => {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      if (rejectEncoding) {
+        rejectEncoding(normalized);
+      }
+      throw normalized;
+    },
+  });
+
+  encoder.configure({
+    bitrate: exportVideoBitrate(width, height),
+    codec,
+    framerate: EXPORT_FPS,
+    height,
+    latencyMode: "quality",
+    width,
+  });
+
+  try {
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const timeSeconds = Math.min(durationSeconds, frameIndex / EXPORT_FPS);
+      await renderExportFrame(
+        state,
+        timeSeconds,
+        width,
+        height,
+        includeBackground,
+        backgroundHex,
+        context,
+      );
+
+      const queueWaitDeadline = Date.now() + ENCODER_STALL_TIMEOUT_MS;
+      while (encoder.encodeQueueSize > 4) {
+        if (Date.now() > queueWaitDeadline) {
+          throw new Error("VideoEncoder stalled while encoding Container Yard MP4.");
+        }
+        await Promise.race([encodingFailed, delay(8)]);
+      }
+
+      const frame = new VideoFrame(canvas, {
+        duration: Math.round((1 / EXPORT_FPS) * 1_000_000),
+        timestamp: Math.round((frameIndex / EXPORT_FPS) * 1_000_000),
+      });
+
+      try {
+        encoder.encode(frame, { keyFrame: frameIndex % 24 === 0 });
+      } finally {
+        frame.close();
+      }
+      onProgress(0.05 + (frameIndex / frameCount) * 0.75);
+      await yieldToUi();
+    }
+
+    await withTimeout(
+      Promise.race([encoder.flush(), encodingFailed]),
+      ENCODER_STALL_TIMEOUT_MS,
+      "VideoEncoder flush stalled while encoding Container Yard MP4.",
+    );
+  } finally {
+    if (encoder.state !== "closed") {
+      encoder.close();
+    }
+  }
+
+  muxer.finalize();
+  onProgress(0.9);
+  return new Blob([target.buffer], { type: "video/mp4" });
 }
 
 async function encodeWithMediaRecorder(
@@ -304,7 +484,7 @@ async function encodeWithMediaRecorder(
 
   const recorder = new MediaRecorder(stream, {
     mimeType,
-    videoBitsPerSecond: Math.max(2_500_000, width * height * 3),
+    videoBitsPerSecond: exportVideoBitrate(width, height),
   });
   const chunks: Blob[] = [];
 
@@ -338,18 +518,21 @@ async function encodeWithMediaRecorder(
       );
       track.requestFrame();
       onProgress(0.05 + (frameIndex / frameCount) * 0.85);
-      // Pace near realtime so MediaRecorder timestamps approximate edited timeline duration.
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, Math.round(1000 / EXPORT_FPS));
-      });
+      await delay(Math.round(1000 / EXPORT_FPS));
     }
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 120);
-    });
+    await delay(120);
     if (recorder.state !== "inactive") {
       recorder.stop();
     }
+
+    const blob = await withTimeout(
+      recording,
+      RECORDER_STOP_TIMEOUT_MS,
+      "MediaRecorder stalled while finishing Container Yard video.",
+    );
+    onProgress(0.95);
+    return blob;
   } catch (error) {
     if (recorder.state !== "inactive") {
       recorder.stop();
@@ -358,10 +541,6 @@ async function encodeWithMediaRecorder(
   } finally {
     stream.getTracks().forEach((item) => item.stop());
   }
-
-  const blob = await recording;
-  onProgress(0.95);
-  return blob;
 }
 
 async function getFfmpeg(): Promise<FFmpeg> {
@@ -376,9 +555,21 @@ async function getFfmpeg(): Promise<FFmpeg> {
   ffmpegLoadPromise = (async () => {
     const ffmpeg = new FFmpeg();
     const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
-    const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
-    const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
-    await ffmpeg.load({ coreURL, wasmURL });
+    const coreURL = await withTimeout(
+      toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+      FFMPEG_LOAD_TIMEOUT_MS,
+      "Timed out downloading ffmpeg.wasm.",
+    );
+    const wasmURL = await withTimeout(
+      toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      FFMPEG_LOAD_TIMEOUT_MS,
+      "Timed out downloading ffmpeg.wasm.",
+    );
+    await withTimeout(
+      ffmpeg.load({ coreURL, wasmURL }),
+      FFMPEG_LOAD_TIMEOUT_MS,
+      "Timed out loading ffmpeg.wasm.",
+    );
     ffmpegInstance = ffmpeg;
     return ffmpeg;
   })().catch((error: unknown) => {
@@ -426,6 +617,7 @@ async function collectPngFrames(
     });
     frames.push(new Uint8Array(await blob.arrayBuffer()));
     onProgress(0.05 + (frameIndex / frameCount) * 0.55);
+    await yieldToUi();
   }
 
   return frames;
@@ -500,7 +692,12 @@ async function encodeWithFfmpeg(
           ];
 
   onProgress(0.75);
-  const code = await ffmpeg.exec(args);
+  const encodeBudgetMs = Math.max(60_000, frames.length * 1_200);
+  const code = await withTimeout(
+    ffmpeg.exec(args),
+    encodeBudgetMs,
+    `Timed out encoding ${format.toUpperCase()} with ffmpeg.wasm.`,
+  );
   if (code !== 0) {
     throw new Error(`ffmpeg exited with code ${code} while encoding ${format.toUpperCase()}.`);
   }
@@ -572,6 +769,12 @@ async function exportMp4(
   onProgress: (ratio: number) => void,
 ): Promise<Blob> {
   const errors: string[] = [];
+
+  try {
+    return await encodeMp4WithVideoEncoder(state, width, height, includeBackground, onProgress);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
 
   try {
     return await encodeWithFfmpeg(state, width, height, includeBackground, "mp4", onProgress);

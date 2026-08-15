@@ -241,7 +241,8 @@ function resolveStripePaletteIndex(
 
 function patternNoise(cellX: number, cellY: number, seed: number): number {
   let hash = Math.imul(cellX ^ seed, 374761393);
-  hash = Math.imul(hash ^ (hash >>> 13), 668265263);
+  hash = Math.imul(hash ^ cellY, 668265263);
+  hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
   hash = (hash ^ (hash >>> 16)) >>> 0;
   return hash / 4294967296;
 }
@@ -336,6 +337,7 @@ function resolveContainerColor(
   palette: readonly string[],
   rng: () => number,
 ): string {
+  void rng;
   const paletteLength = palette.length;
   let index = 0;
 
@@ -365,7 +367,7 @@ function resolveContainerColor(
       index = resolveChevronPaletteIndex(centerX, centerY, width, height, settings, paletteLength);
       break;
     default:
-      index = Math.floor(rng() * paletteLength);
+      index = Math.floor(patternNoise(col, row, settings.seed) * paletteLength);
       break;
   }
 
@@ -382,6 +384,7 @@ export function readSourceMatteSettings(settings: ContainerYardSettings): Source
   return {
     alphaThreshold: 40,
     enabled: style !== "off",
+    invert: settings.matteInvert === true,
     minCoverage: settings.matteMinCoverage,
     mode: style === "off" ? "both" : style,
     // Higher tolerance than the original 24 so soft AA on flat white/black empties still clear.
@@ -461,8 +464,9 @@ function assignContainerColors(
       : null);
   const matteSettings = readSourceMatteSettings(settings);
   const useDither = ditherSettings.enabled && image !== null;
+  const useImageFill = useDither && image !== null && options?.sampleImageColors === true;
   const ditherColors =
-    useDither && image
+    useImageFill && image
       ? buildDitherImageColors(
           ditherSettings,
           slots,
@@ -483,10 +487,16 @@ function assignContainerColors(
       return;
     }
 
+    const scaleX = options?.layoutScaleX && options.layoutScaleX > 0 ? options.layoutScaleX : 1;
+    const scaleY = options?.layoutScaleY && options.layoutScaleY > 0 ? options.layoutScaleY : 1;
+    const pitchX = Math.max(1, (slot.width + settings.columnGap) / scaleX);
+    const pitchY = Math.max(1, (slot.height + settings.rowGap) / scaleY);
+    const gridCol = Math.floor(slot.centerX / scaleX / pitchX);
+    const gridRow = Math.floor(slot.centerY / scaleY / pitchY);
     const proceduralColor = resolveContainerColor(
       settings,
-      slot.row,
-      slot.col,
+      gridRow,
+      gridCol,
       slot.centerX,
       slot.centerY,
       width,
@@ -497,7 +507,7 @@ function assignContainerColors(
 
     let color = proceduralColor;
 
-    if (useDither && image) {
+    if (useImageFill && image) {
       const imageColor = ditherColors[index] ?? proceduralColor;
       const mix = Math.min(1, Math.max(0, ditherSettings.strength / 100));
 

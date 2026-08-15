@@ -48,6 +48,7 @@ describe("appSchema", () => {
     expect(productTitles).toEqual(
       expect.arrayContaining([
         "App Mode",
+        "Source",
         "Grid Layout",
         "Image Export",
         "Video Export",

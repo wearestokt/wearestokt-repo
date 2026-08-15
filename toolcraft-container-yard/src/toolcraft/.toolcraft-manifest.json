@@ -1,5 +1,5 @@
 {
-  "description": "Integrity manifest for copied Toolcraft sources. Container Yard documents intentional local patches for video media import and discrete yard keyframe capability.",
+  "description": "Integrity manifest for copied Toolcraft sources. Container Yard documents intentional local patches for video media import, discrete yard keyframe capability, and sticky-footer export percent/ETA.",
   "files": {
     "runtime/contracts/component-contracts.ts": "6725c4fe197ac43a5823e42bd37ce8f93de3796199f3ce6dd6c17a8bb6ec74e9",
     "runtime/contracts/decision-contracts.ts": "67e61a2f92f00f37ce3eb4f47f95e7315722ba464c0e16a5d798972fb4deb1c2",
@@ -141,7 +141,7 @@
     "ui/components/panel/panel-header.tsx": "45f3ebe76cc6a20d9be735957f9f50441bc2dea4f554cd69a50902cdf4b9fb9e",
     "ui/components/panel/panel-icon-button.tsx": "daed20f6a018438feccb5bbe8c443499f1cff21a615de522fa08943ab6b8d13d",
     "ui/components/panel/panel-section.tsx": "d1e183b8c410eaa1e0d200efed856f2a2f5ae0389b897978069213735e0f0ed6",
-    "ui/components/panel/panel-surface.tsx": "1081901a7e02a53f15ca989c368c46bc5bc4de531f1a5b0221dc64ec47a61f53",
+    "ui/components/panel/panel-surface.tsx": "52d49ba318b8f72918e73e5f6f18a126dd552b54b1331d8f66dc99a16b73d6b9",
     "ui/components/panel/panel.tsx": "3e9fa33645024c56478d8c2f1d563888acbf4c8460592f4cefa2a83a63079a6c",
     "ui/components/primitives/animated-loader.tsx": "3a14aa553813bdcc3baf25b9f87345d3d95a7ea3e3f747a8ce279fd70f364468",
     "ui/components/primitives/button-group.tsx": "092bbc2f97d5e29f83f699a1ab581b2ebc1b3872df07deea1e4b8a03d7420e65",

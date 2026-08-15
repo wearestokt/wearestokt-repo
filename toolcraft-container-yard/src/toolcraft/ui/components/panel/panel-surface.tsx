@@ -169,6 +169,84 @@ export const PanelContentSurface = React.forwardRef<
   );
 });
 
+function formatStickyFooterRemaining(seconds: number): string {
+  const rounded = Math.max(0, Math.round(seconds));
+  if (rounded < 5) {
+    return "a few seconds left";
+  }
+  if (rounded < 60) {
+    return `${rounded}s left`;
+  }
+  const minutes = Math.floor(rounded / 60);
+  const leftover = rounded % 60;
+  if (leftover === 0) {
+    return `${minutes}m left`;
+  }
+  return `${minutes}m ${leftover}s left`;
+}
+
+function StickyFooterExportStatus({
+  active,
+  progress,
+}: {
+  active: boolean;
+  progress: number | null;
+}): React.JSX.Element | null {
+  const startedAtRef = React.useRef<number | null>(null);
+  const [, setNowTick] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!active) {
+      startedAtRef.current = null;
+      return undefined;
+    }
+
+    startedAtRef.current ??= Date.now();
+    const timer = window.setInterval(() => {
+      setNowTick((value) => value + 1);
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [active]);
+
+  if (!active) {
+    return null;
+  }
+
+  const percent =
+    typeof progress === "number" ? Math.round(Math.max(0, Math.min(1, progress)) * 100) : null;
+  let detail = "Starting";
+
+  if (typeof progress === "number" && progress >= 0.97) {
+    detail = "Finishing";
+  } else if (
+    typeof progress === "number" &&
+    progress >= 0.05 &&
+    startedAtRef.current != null
+  ) {
+    const elapsedMs = Date.now() - startedAtRef.current;
+    if (elapsedMs >= 800) {
+      detail = formatStickyFooterRemaining(((1 - progress) * elapsedMs) / progress / 1000);
+    }
+  } else if (typeof progress !== "number") {
+    detail = "Working";
+  }
+
+  const label = percent === null ? detail : `${percent}% · ${detail}`;
+
+  return (
+    <p
+      aria-live="polite"
+      className="px-3 pt-2 pb-0 text-center text-[0.6875rem] leading-4 tabular-nums text-[color:var(--muted-foreground)]"
+      data-slot="toolcraft-sticky-footer-progress-status"
+    >
+      {label}
+    </p>
+  );
+}
+
 function PanelContentWithStickyFooter({
   children,
   stickyFooter,
@@ -199,6 +277,7 @@ function PanelContentWithStickyFooter({
         data-slot="toolcraft-panel-sticky-actions"
         style={stickyFooterStyle}
       >
+        <StickyFooterExportStatus active={stickyFooterActive} progress={stickyFooterProgress} />
         {stickyFooter}
       </div>
     </div>

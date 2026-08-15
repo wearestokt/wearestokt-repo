@@ -36,19 +36,6 @@ export const appSchema = defineToolcraft({
       sections: [
         {
           controls: {
-            sourceImage: {
-              accept: "image/*,video/*",
-              assetKind: "image",
-              defaultValue: null,
-              description: "Still image or video that drives ASCII block sampling at the playhead.",
-              label: false,
-              orderRole: "input",
-              performanceReason: "Uploads a reference image or video for ASCII block sampling.",
-              performanceRole: "responsiveness",
-              target: "media.sourceImage",
-              type: "fileDrop",
-              visibleWhen: { equals: "dither", target: "yard.layoutType" },
-            },
             layoutType: {
               defaultValue: "rectangular",
               label: "App mode",
@@ -126,7 +113,7 @@ export const appSchema = defineToolcraft({
             ditherStrength: {
               defaultValue: 0,
               description:
-                "Blend between Color Pattern assignment and image-sampled Palette colors. Use 0% for flat alpha silhouettes; raise toward 100% when the source photo should drive colors.",
+                "Blend Color Pattern with sampled still-image colors only when Subject matte is Off. Video and silhouettes always keep grid colors; the source only cuts which cells show.",
               label: "Image Mix",
               max: 100,
               min: 0,
@@ -186,6 +173,18 @@ export const appSchema = defineToolcraft({
               unit: "%",
               visibleWhen: { equals: "dither", target: "yard.layoutType" },
             },
+            matteInvert: {
+              defaultValue: false,
+              description:
+                "Flip subject vs empty in the same matte. Use for white-on-black sources when the default cutout is inverted.",
+              label: "Invert mask",
+              orderRole: "detail",
+              performanceReason: "Toggles matte polarity without rebuilding sampling strategy.",
+              performanceRole: "responsiveness",
+              target: "yard.matteInvert",
+              type: "switch",
+              visibleWhen: { equals: "dither", target: "yard.layoutType" },
+            },
           },
           layoutGroups: [
             {
@@ -210,6 +209,24 @@ export const appSchema = defineToolcraft({
             },
           ],
           title: "App Mode",
+        },
+        {
+          controls: {
+            sourceImage: {
+              accept: "image/*,video/*",
+              assetKind: "image",
+              defaultValue: null,
+              description: "Still image or video that drives ASCII block sampling at the playhead.",
+              label: false,
+              orderRole: "input",
+              performanceReason: "Uploads a reference image or video for ASCII block sampling.",
+              performanceRole: "responsiveness",
+              target: "media.sourceImage",
+              type: "fileDrop",
+              visibleWhen: { equals: "dither", target: "yard.layoutType" },
+            },
+          },
+          title: "Source",
         },
         {
           controls: {
