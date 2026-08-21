@@ -161,6 +161,23 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Skipped checks: Full browser perf; Playwright browser suite unless Chromium available.
 - Risks: Local acceptance allows unified Export Settings (stock Toolcraft docs still describe separate Image/Video Export); hard refresh clears v2 localStorage.
 
+### Iteration 10 — Single container Length
+
+- Request: Removing Long mix changed layout too much; remove Length long too so only Length defines container length without overlaps.
+- Task type: schema + layout (Tier 2).
+- User-visible result: Grid Layout shows Width + Length; every cell uses one length so pitch matches block size and containers do not overlap from mixed lengths.
+- Source/reference checked: rectangular/radial layout pitch vs per-slot lengthLong mix.
+- Reference inputs: None.
+- Docs/contracts read: `workflow.md`, `schema-reference.md`.
+- Contract rules applied: `controls-product-coverage`, `acceptance-product-observable`, `workflow-required`.
+- Decision: Drop `yard.lengthLong`; label `yard.lengthShort` as Length; layouts always use `lengthShort`; persistence v4.
+- Alternatives rejected: Keep hidden 50% mix (still overlaps when long > pitch).
+- State/output mapping: `yard.lengthShort` → uniform container length and pitch.
+- Files changed: schema, rectangular/radial layout, renderer, acceptance/perf/e2e, worklog.
+- Verification: `pnpm verify:quick`.
+- Skipped checks: Full browser perf.
+- Risks: Saved sessions with lengthLong ignored after v4 key change.
+
 ## Decisions
 
 ### Renderer
@@ -183,8 +200,8 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 
 ### Controls
 
-- Decision: Yard sections without Mask Shape, Depth, or Long mix; Source + Invert mask; unified Export Settings.
-- Reason: User requested cleanup; Length short/long stay with fixed 50% mix.
+- Decision: Yard sections without Mask Shape, Depth, Long mix, or Length long; single Length with Width; Source + Invert mask; unified Export Settings.
+- Reason: User requested cleanup; uniform length prevents pitch/length overlap.
 - Evidence: `starterControlSectionInventory`, schema sections.
 
 ### Export

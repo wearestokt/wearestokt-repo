@@ -21,9 +21,9 @@ export const appSchema = defineToolcraft({
   },
   persistence: {
     include: ["values", "canvas", "panels", "media", "timeline"],
-    key: "toolcraft:container-yard:state:v3",
+    key: "toolcraft:container-yard:state:v4",
     storage: "localStorage",
-    version: 3,
+    version: 4,
   },
   panels: {
     timeline: {
@@ -245,29 +245,15 @@ export const appSchema = defineToolcraft({
             },
             lengthShort: {
               defaultValue: 72,
-              description: "Shorter container length (20 ft equivalent).",
-              label: "Length short",
+              description: "Container length along the grid axis.",
+              label: "Length",
               max: 200,
               min: 24,
               orderRole: "primary",
-              performanceReason: "Minimum container length in the grid.",
+              performanceReason: "Container length in the grid.",
               performanceRole: "responsiveness",
               step: 1,
               target: "yard.lengthShort",
-              type: "slider",
-              unit: "px",
-            },
-            lengthLong: {
-              defaultValue: 140,
-              description: "Longer container length (40 ft equivalent).",
-              label: "Length long",
-              max: 320,
-              min: 48,
-              orderRole: "primary",
-              performanceReason: "Maximum container length in the grid.",
-              performanceRole: "responsiveness",
-              step: 1,
-              target: "yard.lengthLong",
               type: "slider",
               unit: "px",
             },
@@ -353,7 +339,7 @@ export const appSchema = defineToolcraft({
           layoutGroups: [
             {
               columns: 2,
-              controls: ["lengthShort", "lengthLong"],
+              controls: ["containerWidth", "lengthShort"],
               layout: "inline",
             },
             {

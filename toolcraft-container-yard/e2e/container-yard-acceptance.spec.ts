@@ -199,17 +199,10 @@ test("browser: container width changes product output", async ({ page }) => {
   }, canvasObservable);
 });
 
-test("browser: length short changes product output", async ({ page }) => {
+test("browser: length changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Length short", 96);
-  }, canvasObservable);
-});
-
-test("browser: length long changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Length long", 180);
+    await setToolcraftSliderValue(page, "Length", 96);
   }, canvasObservable);
 });
 

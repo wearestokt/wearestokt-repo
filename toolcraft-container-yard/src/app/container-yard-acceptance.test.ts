@@ -580,14 +580,8 @@ describe("Container Yard control acceptance", () => {
     expect(hashOutput({ ...baseSettings, containerWidth: 48 })).not.toBe(hashOutput(baseSettings));
   });
 
-  it("length short changes product output", () => {
+  it("length changes product output", () => {
     expect(hashOutput({ ...baseSettings, lengthShort: 96 })).not.toBe(hashOutput(baseSettings));
-  });
-
-  it("length long changes product output", () => {
-    expect(
-      hashOutput({ ...baseSettings, lengthMix: 100, lengthLong: 180 }),
-    ).not.toBe(hashOutput(baseSettings));
   });
 
   it("column gap changes product output", () => {
@@ -603,9 +597,7 @@ describe("Container Yard control acceptance", () => {
   });
 
   it("rotation changes product output", () => {
-    expect(hashOutput({ ...baseSettings, lengthMix: 45, rotation: 25 })).not.toBe(
-      hashOutput({ ...baseSettings, lengthMix: 45 }),
-    );
+    expect(hashOutput({ ...baseSettings, rotation: 25 })).not.toBe(hashOutput(baseSettings));
   });
 
   it("offset changes product output", () => {

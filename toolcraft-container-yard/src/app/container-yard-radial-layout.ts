@@ -34,8 +34,7 @@ export function buildRadialLayout(
         continue;
       }
 
-      const useLong = rng() * 100 < settings.lengthMix;
-      const length = useLong ? settings.lengthLong : settings.lengthShort;
+      const length = settings.lengthShort;
       const rectWidth =
         settings.orientation === "vertical" ? settings.containerWidth : length;
       const rectHeight =

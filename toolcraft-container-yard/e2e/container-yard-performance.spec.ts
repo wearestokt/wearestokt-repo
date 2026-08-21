@@ -320,20 +320,12 @@ test("browser perf: matte invert change stays responsive", async ({ page }) => {
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "yard-matte-invert-change");
 });
 
-test("browser perf: length short drag stays responsive", async ({ page }) => {
+test("browser perf: length drag stays responsive", async ({ page }) => {
   await gotoYard(page);
-  await measureSliderDrag(page, "Length short", "yard-length-short-drag");
+  await measureSliderDrag(page, "Length", "yard-length-drag");
 });
 
-test("browser perf: length long drag stays responsive", async ({ page }) => {
-  await gotoYard(page);
-  await measureSliderDrag(page, "Length long", "yard-length-long-drag");
-});
 
-test("browser perf: length mix drag stays responsive", async ({ page }) => {
-  await gotoYard(page);
-  await measureSliderDrag(page, "Long mix", "yard-length-mix-drag");
-});
 
 test("browser perf: column gap drag stays responsive", async ({ page }) => {
   await gotoYard(page);
