@@ -178,6 +178,23 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Skipped checks: Full browser perf.
 - Risks: Saved sessions with lengthLong ignored after v4 key change.
 
+### Iteration 11 — Global scale in Grid Layout
+
+- Request: Move Global scale into Grid Layout.
+- Task type: schema control grouping (Tier 2).
+- User-visible result: Global scale sits in Grid Layout after Width/Length; Pattern Position keeps Offset only.
+- Source/reference checked: schema Grid Layout / Pattern Position sections.
+- Reference inputs: None.
+- Docs/contracts read: `workflow.md`, `schema-reference.md`.
+- Contract rules applied: `controls-product-coverage`, `controls-layout-heuristics`, `workflow-required`.
+- Decision: Relocate `yard.globalScale` into Grid Layout; Pattern Position is Offset-only.
+- Alternatives rejected: Keep Global scale paired with Offset.
+- State/output mapping: unchanged `yard.globalScale` target; section inventory only.
+- Files changed: `app-schema.ts`, worklog.
+- Verification: `pnpm verify:quick`.
+- Skipped checks: Full browser perf.
+- Risks: None.
+
 ## Decisions
 
 ### Renderer

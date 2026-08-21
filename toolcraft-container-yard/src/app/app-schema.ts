@@ -257,6 +257,21 @@ export const appSchema = defineToolcraft({
               type: "slider",
               unit: "px",
             },
+            globalScale: {
+              defaultValue: 100,
+              description:
+                "Scales container width, length, and gaps together to make the pattern denser or larger on the same canvas.",
+              label: "Global scale",
+              max: 200,
+              min: 25,
+              orderRole: "spatial",
+              performanceReason: "Uniformly scales container geometry and spacing.",
+              performanceRole: "workload",
+              step: 1,
+              target: "yard.globalScale",
+              type: "slider",
+              unit: "%",
+            },
             rotation: {
               defaultValue: 0,
               label: "Rotation",
@@ -370,29 +385,7 @@ export const appSchema = defineToolcraft({
               xLabel: "X",
               yLabel: "Y",
             },
-            globalScale: {
-              defaultValue: 100,
-              description:
-                "Scales container width, length, and gaps together to make the pattern denser or larger on the same canvas.",
-              label: "Global scale",
-              max: 200,
-              min: 25,
-              orderRole: "spatial",
-              performanceReason: "Uniformly scales container geometry and spacing.",
-              performanceRole: "workload",
-              step: 1,
-              target: "yard.globalScale",
-              type: "slider",
-              unit: "%",
-            },
           },
-          layoutGroups: [
-            {
-              columns: 2,
-              controls: ["offset", "globalScale"],
-              layout: "inline",
-            },
-          ],
           title: "Pattern Position",
         },
         {
