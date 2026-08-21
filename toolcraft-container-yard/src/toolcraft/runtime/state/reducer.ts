@@ -768,6 +768,13 @@ export function toolcraftReducer(
               extended,
             },
           },
+          // Extended timeline owns keyframe diamonds; expand rows when Timeline turns on.
+          timeline: extended
+            ? {
+                ...state.timeline,
+                expanded: true,
+              }
+            : state.timeline,
         };
       }
 

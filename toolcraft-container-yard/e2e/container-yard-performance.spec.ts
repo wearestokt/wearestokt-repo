@@ -180,7 +180,7 @@ test("browser perf: export png stays under budget", async ({ page }) => {
   await gotoYard(page);
   await selectToolcraftOption(page, "Format", "PNG");
   const result = await measureToolcraftScenario(page, async () => {
-    await page.getByRole("button", { name: "Export PNG" }).click();
+    await page.getByRole("button", { name: "Export", exact: true }).click();
   });
   expectToolcraftScenarioPerformanceBudget(result, appPerformance, "export-copy");
 });
@@ -505,6 +505,11 @@ test("browser perf: image format change stays responsive", async ({ page }) => {
   await measureSelectChange(page, "Format", "JPG", "export-image-format-change");
 });
 
+test("browser perf: export kind change stays responsive", async ({ page }) => {
+  await gotoYard(page);
+  await measureSelectChange(page, "Output", "Video", "export-kind-change");
+});
+
 test("browser perf: image resolution change stays responsive", async ({ page }) => {
   await gotoYard(page);
   await applyToolcraftPerformanceWorkloadFixture(page, appPerformance, "export-image-resolution-change", {
@@ -715,9 +720,10 @@ test("browser perf: mask inset drag stays responsive", async ({ page }) => {
 
 test("browser perf: video format change stays responsive", async ({ page }) => {
   await gotoYard(page);
+  await selectToolcraftOption(page, "Output", "Video");
   const section = page
     .locator("section")
-    .filter({ has: page.getByRole("button", { name: "Collapse Video Export section" }) })
+    .filter({ has: page.getByRole("button", { name: "Collapse Export Settings section" }) })
     .first();
   const field = section.locator('[data-slot="field"]').filter({ hasText: /^Format/ }).first();
   await field.getByRole("combobox").click();
@@ -730,9 +736,10 @@ test("browser perf: video format change stays responsive", async ({ page }) => {
 
 test("browser perf: video resolution change stays responsive", async ({ page }) => {
   await gotoYard(page);
+  await selectToolcraftOption(page, "Output", "Video");
   const section = page
     .locator("section")
-    .filter({ has: page.getByRole("button", { name: "Collapse Video Export section" }) })
+    .filter({ has: page.getByRole("button", { name: "Collapse Export Settings section" }) })
     .first();
   const field = section.locator('[data-slot="field"]').filter({ hasText: /^Preset/ }).first();
   await field.getByRole("combobox").click();

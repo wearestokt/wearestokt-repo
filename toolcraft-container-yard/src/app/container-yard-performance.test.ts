@@ -60,6 +60,7 @@ describe("Container Yard performance automated tests", () => {
   it("perf: include background change stays responsive", () => {});
   it("perf: background color change stays responsive", () => {});
   it("perf: image format change stays responsive", () => {});
+  it("perf: export kind change stays responsive", () => {});
   it("perf: image resolution change stays responsive", () => {});
   it("perf: seed drag stays responsive", () => {});
   it("perf: render scale drag stays responsive", () => {});

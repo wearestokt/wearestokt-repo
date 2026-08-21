@@ -65,6 +65,7 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Task type: export bugfix (Tier 3).
 - User-visible result: Default MP4 export uses the browser encoder first; stalled ffmpeg/WebCodecs/MediaRecorder/source-seek paths time out and alert instead of hanging.
 - Source/reference checked: `container-yard-video-export.ts` MP4 path; `waitForVideoSeek` missing seeked timeout.
+- Reference inputs: None. Encoder path inspection only.
 - Docs/contracts read: `workflow.md`, `component-rules.md`, `acceptance-testing.md`.
 - Contract rules applied: `output-export-required`.
 - Decision: Prefer MediaRecorder for MP4 (ffmpeg.wasm last); timeout encoder flush, recorder stop, ffmpeg load/exec, and source video seeks; yield between frames so progress can update.
@@ -81,6 +82,7 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Task type: sticky footer progress UI (Tier 1).
 - User-visible result: While Export Video runs, the sticky footer shows percent done and remaining time (for example `42% · 1m 10s left`) above the actions, plus the existing accent bar.
 - Source/reference checked: sticky footer accent indicator in `panel-surface.tsx`; `reportProgress` 0..1 contract.
+- Reference inputs: None. Export progress UI request.
 - Docs/contracts read: `workflow.md`, `component-rules.md`.
 - Contract rules applied: `output-export-required`.
 - Decision: Keep determinate `reportProgress`; derive remaining time from elapsed vs percent; never let fallback encoders jump the bar backward.
@@ -97,6 +99,7 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Task type: export + color assignment bugfix (Tier 3).
 - User-visible result: MP4 uses WebCodecs timestamps so timeline duration is preserved; Random/Palette colors stay locked to grid cells and sampled pixels; encode bitrate raised.
 - Source/reference checked: MediaRecorder wall-clock pacing; `resolveContainerColor` sequential rng; luminance palette bins.
+- Reference inputs: User export container-yard clips and encoder timing evidence.
 - Docs/contracts read: `workflow.md`, `component-rules.md`.
 - Contract rules applied: `output-export-required`.
 - Decision: MP4 prefers VideoEncoder + mp4-muxer; Random hashes by col/row; Palette nearest-RGB then seed shuffle; bitrate at least 16 Mbps.
@@ -112,7 +115,8 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Request: Exported heron clip looks like color noise; each container cell should keep one color for the whole video.
 - Task type: ASCII color assignment (Tier 2).
 - User-visible result: Imported video only cuts the silhouette. Cell fill comes from the Color Pattern grid (row/col + seed) and does not resample the moving footage.
-- Source/reference checked: user export `container-yard (3).mp4` (15s, 3840x2160, 24fps); frames show four-color mosaic reshuffling on the heron.
+- Source/reference checked: user export container-yard clip 3 (15s, 3840x2160, 24fps); frames show four-color mosaic reshuffling on the heron.
+- Reference inputs: User export container-yard clip 3 (QA evidence of color noise, not a clone reference).
 - Docs/contracts read: `workflow.md`.
 - Contract rules applied: `acceptance-product-observable`.
 - Decision: `lockCellColorsToGrid` when the source is video; Image Mix still samples still photos.
@@ -125,10 +129,11 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 
 ### Iteration 8 — Stop silhouette video from resampling fill
 
-- Request: `container-yard (4).mp4` still has mosaic colors swapping at fixed canvas cells.
+- Request: container-yard clip 4 still has mosaic colors swapping at fixed canvas cells.
 - Task type: ASCII color assignment (Tier 2).
 - User-visible result: Silhouette and video ASCII keep Color Pattern fills. Image Mix samples still photos only when Subject matte is Off.
-- Source/reference checked: user export `container-yard (4).mp4`; prior lock flag still allowed sampling when video detection missed or Image Mix was on.
+- Source/reference checked: user export container-yard clip 4; prior lock flag still allowed sampling when video detection missed or Image Mix was on.
+- Reference inputs: User export container-yard clip 4 (QA evidence of color noise, not a clone reference).
 - Docs/contracts read: `workflow.md`.
 - Contract rules applied: `acceptance-product-observable`, `workflow-required`.
 - Decision: Opt-in `sampleImageColors`; default fill is spatial grid hash in unscaled canvas cells; Random Gaps on ASCII uses cell hash instead of sequential RNG; `patternNoise` includes row.
@@ -138,6 +143,23 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 - Verification: targeted `container-yard-acceptance.test.ts`.
 - Skipped checks: Full browser perf; not a first-working or perf complaint pass.
 - Risks: Photo-texture ASCII now requires Subject matte Off; existing sessions with matte Both and Image Mix > 0 will stop sampling until matte is Off.
+
+### Iteration 9 — Controls cleanup, unified export, keyframe diamonds
+
+- Request: Restore keyframes when Timeline is on; remove Mask Shape, Depth, and Long mix; unify image/video export into one section with a single Export button.
+- Task type: schema + runtime timeline gating + export UX (Tier 2).
+- User-visible result: Setup Timeline on shows control diamonds again; Mask Shape and Depth gone; Grid Layout has no Long mix; Export Settings picks Image/Video then Format/Preset; one Export footer button.
+- Source/reference checked: live controls panel; `keyframeControlsEnabled` gated on `timeline.expanded` instead of Setup Timeline.
+- Reference inputs: None. Product control/export UX request.
+- Docs/contracts read: `workflow.md`, `schema-reference.md`, `component-rules.md`, `acceptance-testing.md`.
+- Contract rules applied: `controls-product-coverage`, `output-export-required`, `timeline-enabled-behavior`, `acceptance-product-observable`, `workflow-required`.
+- Decision: Gate diamonds on `panels.timeline.extended`; expand keyframe rows when Timeline turns on; unified `export.kind` section titled Export Settings with local acceptance allowance; fixed length mix at 50% so Length short/long still matter; bump persistence to v3.
+- Alternatives rejected: Keep separate Image Export / Video Export sections; leave diamonds tied to collapsed keyframe row expand state.
+- State/output mapping: `panels.timeline.extended` → diamond UI; `export.kind` + format/preset → single `export` action → still or video pipeline; removed mask/shadow/lengthMix controls no longer in schema.
+- Files changed: schema, panel actions, renderer defaults, acceptance/perf/e2e, controls-panel, reducer, manifest, worklog.
+- Verification: `pnpm verify:quick` targeted unit/schema/acceptance.
+- Skipped checks: Full browser perf; Playwright browser suite unless Chromium available.
+- Risks: Local acceptance allows unified Export Settings (stock Toolcraft docs still describe separate Image/Video Export); hard refresh clears v2 localStorage.
 
 ## Decisions
 
@@ -149,9 +171,9 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 
 ### Timeline
 
-- Decision: Keyframes timeline enabled; video import initializes duration once.
-- Reason: User needs layout animation and Export Video transport.
-- Evidence: `panels.timeline`, `animationIntent.mode = timeline-keyframes`.
+- Decision: Keyframes timeline enabled; Setup Timeline switch gates control diamonds and expands keyframe rows.
+- Reason: Diamonds must appear when Timeline is active, not only after manually expanding the panel.
+- Evidence: `panels.timeline`, `controls-panel` keyframeControlsEnabled, reducer extended→expanded.
 
 ### Layers
 
@@ -161,15 +183,15 @@ Container Yard is a product Toolcraft app with keyframed layout animation, video
 
 ### Controls
 
-- Decision: Existing yard sections + Source (ASCII upload) + Video Export; Invert mask under App Mode matte controls.
-- Reason: Product coverage for layout/look/export; invert polarity without auto-detecting source ink.
+- Decision: Yard sections without Mask Shape, Depth, or Long mix; Source + Invert mask; unified Export Settings.
+- Reason: User requested cleanup; Length short/long stay with fixed 50% mix.
 - Evidence: `starterControlSectionInventory`, schema sections.
 
 ### Export
 
-- Decision: Export Video primary; PNG/SVG/JPG secondary. Format options: MP4 (WebCodecs + mp4-muxer timestamps, ffmpeg then MediaRecorder fallback), WebM alpha (WebCodecs then MediaRecorder), MOV ProRes 4444 (lazy ffmpeg with timeouts). High bitrate (~16 Mbps+). WebM/MOV honor Background Include for alpha; MP4 stays opaque.
-- Reason: Client compositing deliverable plus contract-safe defaults.
-- Evidence: sticky `panel.actions`, `container-yard-video-export.ts`.
+- Decision: One Export Settings section (`export.kind`, format, preset) and one sticky Export button that routes to still or video.
+- Reason: Simpler delivery UX than separate Image/Video sections and multiple footer buttons.
+- Evidence: sticky `panel.actions` value `export`, `container-yard-panel-actions.ts`.
 
 ### Performance
 

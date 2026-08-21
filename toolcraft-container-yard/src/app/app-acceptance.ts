@@ -427,10 +427,11 @@ const ACCEPTANCE_TEST_BASENAMES: Readonly<Record<string, string>> = {
   "export.image.format": "image export format selects encoding",
   "export.image.resolution": "image export resolution sizes output",
   "export.includeBackground": "include background changes product output",
+  "export.kind": "export kind switches image and video pipelines",
   "export.video.format": "video export format selects encoding",
   "export.video.resolution": "video export resolution sizes output",
   "media.sourceImage": "source image upload dithers product output",
-  "panel.actions": "export and copy actions deliver product output",
+  "panel.actions": "export action delivers product output",
   "yard.colorMode": "color mode wave changes product output",
   "yard.colorPatternStep": "pattern step changes product output",
   "yard.colorCount": "color count changes product output",
@@ -444,11 +445,7 @@ const ACCEPTANCE_TEST_BASENAMES: Readonly<Record<string, string>> = {
   "yard.layout": "layout changes product output",
   "yard.layoutType": "layout type radial changes product output",
   "yard.lengthLong": "length long changes product output",
-  "yard.lengthMix": "length mix changes product output",
   "yard.lengthShort": "length short changes product output",
-  "yard.maskInset": "mask inset changes product output",
-  "yard.maskScale": "mask fill area changes product output",
-  "yard.maskShape": "mask shape changes product output",
   "yard.matteMinCoverage": "matte min coverage changes product output",
   "yard.matteInvert": "matte invert changes product output",
   "yard.matteStyle": "matte style changes product output",
@@ -459,10 +456,6 @@ const ACCEPTANCE_TEST_BASENAMES: Readonly<Record<string, string>> = {
   "yard.rotation": "rotation changes product output",
   "yard.rowGap": "row gap changes product output",
   "yard.seed": "seed changes product output",
-  "yard.shadowEnabled": "shadow enabled changes product output",
-  "yard.shadowOffsetX": "shadow offset x changes product output",
-  "yard.shadowOffsetY": "shadow offset y changes product output",
-  "yard.shadowOpacity": "shadow opacity changes product output",
   "yard.shuffle": "shuffle action reshuffles pattern",
   "yard.stagger": "stagger changes product output",
   "yard.stripeColorSlot": "stripe color slot changes product output",
@@ -544,10 +537,10 @@ function buildControlAcceptanceEntries(): ToolcraftComponentAcceptance[] {
         entries.push(
           controlAcceptance({
             ...base,
-            actionCoverage: ["export-video", "export-png", "export-svg", "export-jpg"],
+            actionCoverage: ["export"],
             evidence: "exported-bytes",
             expectedObservable:
-              "Export Video writes WebM/MOV from evaluated frames; Export PNG/SVG/JPG deliver stills at the playhead.",
+              "Export writes a still or video from Export Settings Output (image/video), format, and preset.",
           }),
         );
         continue;
@@ -689,7 +682,7 @@ export const starterControlSectionInventory: readonly ToolcraftControlSectionInv
         groupingReason: `${section.title} groups related Container Yard ${section.title} workflow controls.`,
         targets,
         title: section.title!,
-        workflowStage: ["Background", "Image Export", "Video Export", "Export"].includes(
+        workflowStage: ["Background", "Export Settings", "Export", "Image Export", "Video Export"].includes(
           section.title!,
         )
           ? "export"
@@ -1679,8 +1672,11 @@ function getSearchableControlText({
 
 function actionLooksLikePngExport(action: ToolcraftActionSchema | string): boolean {
   const text = getActionSearchText(action).replace(/([a-z])([A-Z])/g, "$1 $2");
+  const value = getActionValue(action);
 
   return (
+    value === "export" ||
+    value === "export-png" ||
     (/\b(export|download)\b/i.test(text) && /\b(png|image)\b/i.test(text)) ||
     /\bexport\.png\b/i.test(text)
   );
@@ -1688,10 +1684,27 @@ function actionLooksLikePngExport(action: ToolcraftActionSchema | string): boole
 
 function actionLooksLikeVideoExport(action: ToolcraftActionSchema | string): boolean {
   const text = getActionSearchText(action).replace(/([a-z])([A-Z])/g, "$1 $2");
+  const value = getActionValue(action);
 
   return (
+    value === "export" ||
+    value === "export-video" ||
     (/\b(export|download)\b/i.test(text) && /\b(video|mp4|webm|mov)\b/i.test(text)) ||
     /\bexport\.video\b/i.test(text)
+  );
+}
+
+function schemaHasUnifiedExportSettings(schema: ResolvedToolcraftAppSchema): boolean {
+  return (schema.panels.controls?.sections ?? []).some((section) =>
+    Object.values(section.controls).some((control) => control.target === "export.kind"),
+  );
+}
+
+function getUnifiedExportSettingsSection(
+  schema: ResolvedToolcraftAppSchema,
+): NonNullable<ResolvedToolcraftAppSchema["panels"]["controls"]>["sections"][number] | undefined {
+  return (schema.panels.controls?.sections ?? []).find((section) =>
+    Object.values(section.controls).some((control) => control.target === "export.kind"),
   );
 }
 
@@ -3566,19 +3579,31 @@ export function validateToolcraftAcceptanceCoverage(
     const backgroundSection = getSchemaControlsSectionByTitle(schema, "Background");
     const backgroundSectionIndex = getSchemaControlsSectionIndexByTitle(schema, "Background");
     const panelActionsSectionIndex = getFirstPanelActionsSectionIndex(schema);
+    const unifiedExport = schemaHasUnifiedExportSettings(schema);
+    const unifiedExportSection = getUnifiedExportSettingsSection(schema);
+    const unifiedExportSectionIndex = unifiedExportSection
+      ? (schema.panels.controls?.sections ?? []).indexOf(unifiedExportSection)
+      : -1;
     const imageExportSectionIndex = getSchemaControlsSectionIndexByTitle(schema, "Image Export");
     const videoExportSectionIndex = getSchemaControlsSectionIndexByTitle(schema, "Video Export");
-    const expectedOutputSettingsIndex =
-      imageExportSectionIndex >= 0 ? imageExportSectionIndex : videoExportSectionIndex;
-    const finalExportSettingsIndex = hasVideoExportAction
-      ? videoExportSectionIndex
-      : imageExportSectionIndex;
+    const expectedOutputSettingsIndex = unifiedExport
+      ? unifiedExportSectionIndex
+      : imageExportSectionIndex >= 0
+        ? imageExportSectionIndex
+        : videoExportSectionIndex;
+    const finalExportSettingsIndex = unifiedExport
+      ? unifiedExportSectionIndex
+      : hasVideoExportAction
+        ? videoExportSectionIndex
+        : imageExportSectionIndex;
     const includeBackgroundEntry = getSectionControlEntryByTarget(
       backgroundSection,
       "export.includeBackground",
     );
     const backgroundColorEntry = getOutputBackgroundColorEntry(backgroundSection);
-    const imageExportSection = getSchemaControlsSectionByTitle(schema, "Image Export");
+    const imageExportSection = unifiedExport
+      ? unifiedExportSection
+      : getSchemaControlsSectionByTitle(schema, "Image Export");
     const imageFormatEntry = getSectionControlEntryByTarget(
       imageExportSection,
       "export.image.format",
@@ -3606,7 +3631,9 @@ export function validateToolcraftAcceptanceCoverage(
       backgroundSectionIndex !== expectedOutputSettingsIndex - 1
     ) {
       errors.push(
-        'The "Background" controls section must sit directly before the first export settings section: Image Export when PNG export exists, otherwise Video Export.',
+        unifiedExport
+          ? 'The "Background" controls section must sit directly before the unified "Export Settings" section.'
+          : 'The "Background" controls section must sit directly before the first export settings section: Image Export when PNG export exists, otherwise Video Export.',
       );
     }
 
@@ -3616,11 +3643,14 @@ export function validateToolcraftAcceptanceCoverage(
       finalExportSettingsIndex !== panelActionsSectionIndex - 1
     ) {
       errors.push(
-        'Export settings must sit directly above sticky footer actions: Image Export for still apps, or Video Export after Image Export for animated apps.',
+        unifiedExport
+          ? 'Unified Export Settings must sit directly above sticky footer export actions.'
+          : 'Export settings must sit directly above sticky footer actions: Image Export for still apps, or Video Export after Image Export for animated apps.',
       );
     }
 
     if (
+      !unifiedExport &&
       hasVideoExportAction &&
       imageExportSectionIndex >= 0 &&
       videoExportSectionIndex >= 0 &&
@@ -3689,13 +3719,71 @@ export function validateToolcraftAcceptanceCoverage(
 
     if (!imageExportSection) {
       errors.push(
-        'Apps with Export PNG must expose image export settings in a separate controls section titled "Image Export" directly above sticky footer export actions or directly before "Video Export" when video export also exists.',
+        unifiedExport
+          ? 'Apps with Export PNG must expose image/video export settings in one "Export Settings" section with export.kind.'
+          : 'Apps with Export PNG must expose image export settings in a separate controls section titled "Image Export" directly above sticky footer export actions or directly before "Video Export" when video export also exists.',
       );
+    }
+
+    if (unifiedExport) {
+      const kindEntry = getSectionControlEntryByTarget(imageExportSection, "export.kind");
+      const videoFormatEntry = getSectionControlEntryByTarget(
+        imageExportSection,
+        "export.video.format",
+      );
+      const videoResolutionEntry = getSectionControlEntryByTarget(
+        imageExportSection,
+        "export.video.resolution",
+      );
+
+      if (!kindEntry) {
+        errors.push(
+          'Unified Export Settings must include export.kind as a Select with Image and Video options.',
+        );
+      } else if (kindEntry[1].type !== "select") {
+        errors.push("export.kind must be a Select control.");
+      } else {
+        const kindValues = kindEntry[1].options?.map((option) => option.value.toLowerCase()) ?? [];
+        if (!kindValues.includes("image") || !kindValues.includes("video")) {
+          errors.push('export.kind options must include "image" and "video".');
+        }
+      }
+
+      if (!videoFormatEntry) {
+        errors.push(
+          'Unified Export Settings must include export.video.format for video output.',
+        );
+      }
+
+      if (!videoResolutionEntry) {
+        errors.push(
+          'Unified Export Settings must include export.video.resolution for video output.',
+        );
+      }
+
+      const videoFormatControlId = videoFormatEntry?.[0];
+      const videoResolutionControlId = videoResolutionEntry?.[0];
+      if (
+        imageExportSection &&
+        videoFormatControlId &&
+        videoResolutionControlId &&
+        !sectionHasInlineLayoutGroupForPair(
+          imageExportSection,
+          videoFormatControlId,
+          videoResolutionControlId,
+        )
+      ) {
+        errors.push(
+          "Video format and resolution must render as one compact two-column inline row inside Export Settings.",
+        );
+      }
     }
 
     if (!imageFormatControl) {
       errors.push(
-        'The separate "Image Export" section must include a format control with target "export.image.format".',
+        unifiedExport
+          ? 'Unified Export Settings must include a format control with target "export.image.format".'
+          : 'The separate "Image Export" section must include a format control with target "export.image.format".',
       );
     } else {
       if (imageFormatControl.type !== "select") {
@@ -3715,7 +3803,9 @@ export function validateToolcraftAcceptanceCoverage(
 
     if (!imageResolutionControl) {
       errors.push(
-        'The separate "Image Export" section must include a resolution control with target "export.image.resolution".',
+        unifiedExport
+          ? 'Unified Export Settings must include a resolution control with target "export.image.resolution".'
+          : 'The separate "Image Export" section must include a resolution control with target "export.image.resolution".',
       );
     } else {
       if (imageResolutionControl.type !== "select") {

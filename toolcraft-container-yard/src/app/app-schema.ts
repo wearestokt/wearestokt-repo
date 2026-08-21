@@ -21,9 +21,9 @@ export const appSchema = defineToolcraft({
   },
   persistence: {
     include: ["values", "canvas", "panels", "media", "timeline"],
-    key: "toolcraft:container-yard:state:v2",
+    key: "toolcraft:container-yard:state:v3",
     storage: "localStorage",
-    version: 2,
+    version: 3,
   },
   panels: {
     timeline: {
@@ -271,20 +271,6 @@ export const appSchema = defineToolcraft({
               type: "slider",
               unit: "px",
             },
-            lengthMix: {
-              defaultValue: 0,
-              description: "Chance each slot uses the long length.",
-              label: "Long mix",
-              max: 100,
-              min: 0,
-              orderRole: "primary",
-              performanceReason: "Varies 20 ft / 40 ft length distribution.",
-              performanceRole: "responsiveness",
-              step: 1,
-              target: "yard.lengthMix",
-              type: "slider",
-              unit: "%",
-            },
             rotation: {
               defaultValue: 0,
               label: "Rotation",
@@ -367,11 +353,6 @@ export const appSchema = defineToolcraft({
           layoutGroups: [
             {
               columns: 2,
-              controls: ["containerWidth", "lengthMix"],
-              layout: "inline",
-            },
-            {
-              columns: 2,
               controls: ["lengthShort", "lengthLong"],
               layout: "inline",
             },
@@ -427,63 +408,6 @@ export const appSchema = defineToolcraft({
             },
           ],
           title: "Pattern Position",
-        },
-        {
-          controls: {
-            maskShape: {
-              defaultValue: "canvas",
-              label: "Shape",
-              options: [
-                { label: "Canvas", value: "canvas" },
-                { label: "Circle", value: "circle" },
-                { label: "Square", value: "square" },
-                { label: "Triangle", value: "triangle" },
-                { label: "Diamond", value: "diamond" },
-              ],
-              orderRole: "mode",
-              performanceReason: "Clips containers to the chosen boundary shape.",
-              performanceRole: "responsiveness",
-              target: "yard.maskShape",
-              type: "select",
-            },
-            maskExtent: {
-              defaultValue: 92,
-              description: "Fill of circle, square, triangle, or diamond masks.",
-              label: "Fill area",
-              max: 100,
-              min: 20,
-              orderRole: "primary",
-              performanceReason: "Scales non-canvas mask shapes.",
-              performanceRole: "workload",
-              step: 1,
-              target: "yard.maskScale",
-              type: "slider",
-              unit: "%",
-              visibleWhen: { notEquals: "canvas", target: "yard.maskShape" },
-            },
-            maskInset: {
-              defaultValue: 0,
-              description: "Padding inside the mask or canvas edge.",
-              label: "Inset",
-              max: 200,
-              min: 0,
-              orderRole: "detail",
-              performanceReason: "Shrinks the clip boundary inward.",
-              performanceRole: "responsiveness",
-              step: 1,
-              target: "yard.maskInset",
-              type: "slider",
-              unit: "px",
-            },
-          },
-          layoutGroups: [
-            {
-              columns: 2,
-              controls: ["maskShape", "maskExtent"],
-              layout: "inline",
-            },
-          ],
-          title: "Mask Shape",
         },
         {
           controls: {
@@ -887,69 +811,6 @@ export const appSchema = defineToolcraft({
         },
         {
           controls: {
-            shadowEnabled: {
-              defaultValue: false,
-              label: "Shadow",
-              orderRole: "mode",
-              performanceReason: "Draws offset drop shadows behind containers.",
-              performanceRole: "responsiveness",
-              target: "yard.shadowEnabled",
-              type: "switch",
-            },
-            shadowOpacity: {
-              defaultValue: 35,
-              label: "Shadow opacity",
-              max: 100,
-              min: 0,
-              orderRole: "strength",
-              performanceReason: "Shadow darkness.",
-              performanceRole: "responsiveness",
-              step: 1,
-              target: "yard.shadowOpacity",
-              type: "slider",
-              unit: "%",
-              visibleWhen: { equals: true, target: "yard.shadowEnabled" },
-            },
-            shadowOffsetX: {
-              defaultValue: 6,
-              label: "Shadow X",
-              max: 30,
-              min: -30,
-              orderRole: "detail",
-              performanceReason: "Horizontal shadow offset.",
-              performanceRole: "responsiveness",
-              step: 1,
-              target: "yard.shadowOffsetX",
-              type: "slider",
-              unit: "px",
-              visibleWhen: { equals: true, target: "yard.shadowEnabled" },
-            },
-            shadowOffsetY: {
-              defaultValue: 6,
-              label: "Shadow Y",
-              max: 30,
-              min: -30,
-              orderRole: "detail",
-              performanceReason: "Vertical shadow offset.",
-              performanceRole: "responsiveness",
-              step: 1,
-              target: "yard.shadowOffsetY",
-              type: "slider",
-              unit: "px",
-              visibleWhen: { equals: true, target: "yard.shadowEnabled" },
-            },
-          },
-          layoutGroups: [
-            {
-              columns: 2,
-              controls: ["shadowOffsetX", "shadowOffsetY"],
-              layout: "inline",
-            },
-          ],
-          title: "Depth",
-        },
-        {
-          controls: {
             includeBackground: {
               defaultValue: false,
               label: "Include",
@@ -978,6 +839,20 @@ export const appSchema = defineToolcraft({
         },
         {
           controls: {
+            exportKind: {
+              defaultValue: "image",
+              description: "Choose still image or timeline video output for the Export button.",
+              label: "Output",
+              options: [
+                { label: "Image", value: "image" },
+                { label: "Video", value: "video" },
+              ],
+              orderRole: "mode",
+              performanceReason: "Switches sticky export between still and video pipelines.",
+              performanceRole: "responsiveness",
+              target: "export.kind",
+              type: "select",
+            },
             imageFormat: {
               defaultValue: "png",
               label: "Format",
@@ -991,6 +866,22 @@ export const appSchema = defineToolcraft({
               performanceRole: "responsiveness",
               target: "export.image.format",
               type: "select",
+              visibleWhen: { equals: "image", target: "export.kind" },
+            },
+            videoFormat: {
+              defaultValue: "mp4",
+              label: "Format",
+              options: [
+                { label: "MP4", value: "mp4" },
+                { label: "WebM", value: "webm" },
+                { label: "MOV", value: "mov" },
+              ],
+              orderRole: "mode",
+              performanceReason: "Chooses alpha video container: MP4 baseline, WebM alpha, or ProRes MOV.",
+              performanceRole: "responsiveness",
+              target: "export.video.format",
+              type: "select",
+              visibleWhen: { equals: "video", target: "export.kind" },
             },
             imageResolution: {
               defaultValue: "4k",
@@ -1005,32 +896,7 @@ export const appSchema = defineToolcraft({
               performanceRole: "workload",
               target: "export.image.resolution",
               type: "select",
-            },
-          },
-          layoutGroups: [
-            {
-              columns: 2,
-              controls: ["imageFormat", "imageResolution"],
-              layout: "inline",
-            },
-          ],
-          title: "Image Export",
-        },
-        {
-          controls: {
-            videoFormat: {
-              defaultValue: "mp4",
-              label: "Format",
-              options: [
-                { label: "MP4", value: "mp4" },
-                { label: "WebM", value: "webm" },
-                { label: "MOV", value: "mov" },
-              ],
-              orderRole: "mode",
-              performanceReason: "Chooses alpha video container: MP4 baseline, WebM alpha, or ProRes MOV.",
-              performanceRole: "responsiveness",
-              target: "export.video.format",
-              type: "select",
+              visibleWhen: { equals: "image", target: "export.kind" },
             },
             videoResolution: {
               defaultValue: "current",
@@ -1044,16 +910,22 @@ export const appSchema = defineToolcraft({
               performanceRole: "workload",
               target: "export.video.resolution",
               type: "select",
+              visibleWhen: { equals: "video", target: "export.kind" },
             },
           },
           layoutGroups: [
+            {
+              columns: 2,
+              controls: ["imageFormat", "imageResolution"],
+              layout: "inline",
+            },
             {
               columns: 2,
               controls: ["videoFormat", "videoResolution"],
               layout: "inline",
             },
           ],
-          title: "Video Export",
+          title: "Export Settings",
         },
         {
           controls: {
@@ -1061,27 +933,9 @@ export const appSchema = defineToolcraft({
               actions: [
                 {
                   icon: "upload-simple",
-                  label: "Export Video",
-                  value: "export-video",
+                  label: "Export",
+                  value: "export",
                   variant: "default",
-                },
-                {
-                  icon: "upload-simple",
-                  label: "Export PNG",
-                  value: "export-png",
-                  variant: "secondary",
-                },
-                {
-                  icon: "upload-simple",
-                  label: "Export SVG",
-                  value: "export-svg",
-                  variant: "secondary",
-                },
-                {
-                  icon: "upload-simple",
-                  label: "Export JPG",
-                  value: "export-jpg",
-                  variant: "secondary",
                 },
               ],
               target: "panel.actions",

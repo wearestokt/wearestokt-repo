@@ -1517,7 +1517,7 @@ export function ControlsPanel({
   );
   const keyframeControlsEnabled = Boolean(
     state.schema.assembly.capabilities.includes("timeline.keyframes") &&
-      state.timeline.expanded,
+      state.panels.timeline.extended === true,
   );
 
   React.useEffect(() => {

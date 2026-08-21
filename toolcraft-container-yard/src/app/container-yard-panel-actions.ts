@@ -19,6 +19,7 @@ import { downloadContainerYardVideo } from "./container-yard-video-export";
 import { isContainerYardVideoAsset } from "./container-yard-source-frame";
 
 const exportActionValues = new Set([
+  "export",
   "export-svg",
   "export-png",
   "export-jpg",
@@ -30,6 +31,10 @@ const exportActionValues = new Set([
 
 function isCopyAction(value: string): boolean {
   return value.startsWith("copy-");
+}
+
+function readExportKind(state: ToolcraftState): "image" | "video" {
+  return state.values["export.kind"] === "video" ? "video" : "image";
 }
 
 async function resolveExportImageData(state: ToolcraftState) {
@@ -66,7 +71,17 @@ export async function handleContainerYardPanelAction({
     return;
   }
 
-  if (action.value === "export-video") {
+  const resolvedActionValue =
+    action.value === "export"
+      ? readExportKind(state) === "video"
+        ? "export-video"
+        : (() => {
+            const format = readContainerYardExportFormat(state);
+            return format === "jpg" ? "export-jpg" : format === "svg" ? "export-svg" : "export-png";
+          })()
+      : action.value;
+
+  if (resolvedActionValue === "export-video") {
     reportProgress(0.02);
     let peakProgress = 0.02;
     try {
@@ -87,7 +102,7 @@ export async function handleContainerYardPanelAction({
 
   reportProgress(0.05);
   const format = readContainerYardExportFormat(state);
-  const isCopy = isCopyAction(action.value);
+  const isCopy = isCopyAction(resolvedActionValue);
   const settings = readContainerYardSettings(state);
   const asset = getSourceImageAsset(state.mediaAssets);
   const needsAsyncImage =
@@ -103,11 +118,11 @@ export async function handleContainerYardPanelAction({
 
   reportProgress(0.45);
 
-  if (format === "svg" || action.value === "export-svg" || action.value === "copy-svg") {
+  if (format === "svg" || resolvedActionValue === "export-svg" || resolvedActionValue === "copy-svg") {
     const svg = buildContainerYardExportSvgSync(state, imageData);
     reportProgress(0.9);
 
-    if (isCopy || action.value === "copy-svg") {
+    if (isCopy || resolvedActionValue === "copy-svg") {
       await navigator.clipboard.writeText(svg);
       reportProgress(1);
       return;
@@ -119,9 +134,9 @@ export async function handleContainerYardPanelAction({
   }
 
   const actionFormat =
-    action.value === "export-jpg" || action.value === "copy-jpg"
+    resolvedActionValue === "export-jpg" || resolvedActionValue === "copy-jpg"
       ? "jpg"
-      : action.value === "export-png" || action.value === "copy-png"
+      : resolvedActionValue === "export-png" || resolvedActionValue === "copy-png"
         ? "png"
         : format;
   const mimeType = actionFormat === "jpg" ? "image/jpeg" : "image/png";

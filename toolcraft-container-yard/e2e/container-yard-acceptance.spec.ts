@@ -213,13 +213,6 @@ test("browser: length long changes product output", async ({ page }) => {
   }, canvasObservable);
 });
 
-test("browser: length mix changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Long mix", 80);
-  }, canvasObservable);
-});
-
 test("browser: column gap changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
@@ -532,35 +525,6 @@ test("browser: palette color 8 changes product output", async ({ page }) => {
   }, canvasObservable);
 });
 
-test("browser: shadow enabled changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expectToolcraftProductObservableToChange(page, async () => {
-    const field = await getToolcraftFieldByLabel(page, "Shadow");
-    await field.getByRole("switch").click();
-  }, canvasObservable);
-});
-
-test("browser: shadow offset x changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Shadow X", 14);
-  }, canvasObservable);
-});
-
-test("browser: shadow offset y changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Shadow Y", 14);
-  }, canvasObservable);
-});
-
-test("browser: shadow opacity changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expectToolcraftProductObservableToChange(page, async () => {
-    await setToolcraftSliderValue(page, "Shadow opacity", 70);
-  }, canvasObservable);
-});
-
 test("browser: include background changes product output", async ({ page }) => {
   await page.goto("/");
   await expectToolcraftProductObservableToChange(page, async () => {
@@ -613,11 +577,11 @@ test("browser: canvas preview matches product output dimensions", async ({ page 
 
 test("browser: image export format selects encoding", async ({ page }) => {
   await page.goto("/");
-  await selectSectionOption(page, "Image Export", "Format", "JPG");
+  await selectSectionOption(page, "Export Settings", "Format", "JPG");
 
   const download = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export JPG" }).click(),
+    page.getByRole("button", { name: "Export", exact: true }).click(),
   ]).then(([event]) => event);
 
   expect(download.suggestedFilename()).toMatch(/\.jpg$/);
@@ -630,10 +594,11 @@ test("browser: image export format selects encoding", async ({ page }) => {
 
 test("browser: image export svg format delivers vector output", async ({ page }) => {
   await page.goto("/");
+  await selectSectionOption(page, "Export Settings", "Format", "SVG");
 
   const download = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export SVG" }).click(),
+    page.getByRole("button", { name: "Export", exact: true }).click(),
   ]).then(([event]) => event);
 
   expect(download.suggestedFilename()).toMatch(/\.svg$/);
@@ -648,12 +613,12 @@ test("browser: image export svg format delivers vector output", async ({ page })
 test("browser: image export resolution sizes output", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
-  await selectSectionOption(page, "Image Export", "Format", "PNG");
-  await selectSectionOption(page, "Image Export", "Preset", "8K");
+  await selectSectionOption(page, "Export Settings", "Format", "PNG");
+  await selectSectionOption(page, "Export Settings", "Preset", "8K");
 
   const download = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export PNG" }).click(),
+    page.getByRole("button", { name: "Export", exact: true }).click(),
   ]).then(([event]) => event);
 
   const path = await download.path();
@@ -671,20 +636,18 @@ test("browser: image export resolution sizes output", async ({ page }) => {
   expect(Math.max(decodedSize.width, decodedSize.height)).toBeGreaterThanOrEqual(8192);
 });
 
-test("browser: export and copy actions deliver product output", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+test("browser: export action delivers product output", async ({ page }) => {
   await page.goto("/");
+  await selectSectionOption(page, "Export Settings", "Format", "SVG");
 
   const download = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export SVG" }).click(),
+    page.getByRole("button", { name: "Export", exact: true }).click(),
   ]).then(([event]) => event);
   expect(download.suggestedFilename()).toMatch(/\.svg$/);
 
-  await page.getByRole("button", { name: "Copy SVG" }).click();
-  const clipboard = await page.evaluate(async () => navigator.clipboard.read());
-  expect(clipboard.length).toBeGreaterThan(0);
-  await expect(page.getByRole("button", { name: "Export Video" })).toBeVisible();
+  await selectSectionOption(page, "Export Settings", "Output", "Video");
+  await expect(page.getByRole("button", { name: "Export", exact: true })).toBeVisible();
 });
 
 test("browser: layout type radial changes product output", async ({ page }) => {
@@ -814,29 +777,24 @@ test("browser: timeline playback duration and scrub update yard", async ({ page 
   await expect(page.locator(yardCanvasSelector)).toBeVisible();
 });
 
-test("browser: mask shape changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(yardCanvasSelector)).toBeVisible();
-});
-
-test("browser: mask fill area changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(yardCanvasSelector)).toBeVisible();
-});
-
-test("browser: mask inset changes product output", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(yardCanvasSelector)).toBeVisible();
-});
-
 test("browser: video export format selects encoding", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Export Video" })).toBeVisible();
+  await selectSectionOption(page, "Export Settings", "Output", "Video");
+  await expect(page.getByRole("button", { name: "Export", exact: true })).toBeVisible();
 });
 
 test("browser: video export resolution sizes output", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Export Video" })).toBeVisible();
+  await selectSectionOption(page, "Export Settings", "Output", "Video");
+  await expect(page.getByRole("button", { name: "Export", exact: true })).toBeVisible();
+});
+
+test("browser: export kind switches image and video pipelines", async ({ page }) => {
+  await page.goto("/");
+  await selectSectionOption(page, "Export Settings", "Output", "Video");
+  await expect(page.getByText("Preset", { exact: true }).first()).toBeVisible();
+  await selectSectionOption(page, "Export Settings", "Output", "Image");
+  await expect(page.getByRole("button", { name: "Export", exact: true })).toBeVisible();
 });
 
 test("browser: export video matches timeline duration and resolution", async ({ page }) => {

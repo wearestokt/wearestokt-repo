@@ -823,7 +823,9 @@ function getSchemaVideoExportSection(
   schema: ResolvedToolcraftAppSchema = appSchema,
 ): ResolvedControlsSection | undefined {
   return (schema.panels.controls?.sections ?? []).find(
-    (section) => normalizeSectionTitle(section.title) === "video export",
+    (section) =>
+      normalizeSectionTitle(section.title) === "video export" ||
+      Object.values(section.controls).some((control) => control.target === "export.video.format"),
   );
 }
 
@@ -831,7 +833,10 @@ function getSchemaImageExportSection(
   schema: ResolvedToolcraftAppSchema = appSchema,
 ): ResolvedControlsSection | undefined {
   return (schema.panels.controls?.sections ?? []).find(
-    (section) => normalizeSectionTitle(section.title) === "image export",
+    (section) =>
+      normalizeSectionTitle(section.title) === "image export" ||
+      normalizeSectionTitle(section.title) === "export settings" ||
+      Object.values(section.controls).some((control) => control.target === "export.image.format"),
   );
 }
 
@@ -1172,11 +1177,17 @@ function getSchemaBackgroundControlTargets(
 }
 
 function textLooksLikePngExport(text: string): boolean {
-  return /\b(export|download)\b/i.test(text) && /\bpng\b|\bimage\b/i.test(text);
+  return (
+    /\bexport\b/i.test(text) ||
+    (/\b(export|download)\b/i.test(text) && /\bpng\b|\bimage\b/i.test(text))
+  );
 }
 
 function textLooksLikeVideoExport(text: string): boolean {
-  return /\b(export|download)\b/i.test(text) && /\b(video|mp4|webm|mov)\b/i.test(text);
+  return (
+    /\bexport\b/i.test(text) ||
+    (/\b(export|download)\b/i.test(text) && /\b(video|mp4|webm|mov)\b/i.test(text))
+  );
 }
 
 function schemaHasAnimatedProductOutput(): boolean {
@@ -4263,7 +4274,7 @@ describe("Toolcraft template app acceptance coverage", () => {
 
     expect(
       imageExportSection,
-      'Apps with Export PNG must expose image settings in a separate controls section titled "Image Export".',
+      'Apps with Export PNG must expose image settings in Export Settings (or Image Export).',
     ).toBeDefined();
     expect(
       imageFormatControl,
@@ -4341,10 +4352,13 @@ describe("Toolcraft template app acceptance coverage", () => {
       panelActionTexts.some(textLooksLikeVideoExport),
       "Animated product apps must expose Export Video through panelActions in addition to Export PNG.",
     ).toBe(true);
+    const hasUnifiedExportAction = panelActionTexts.some((text) =>
+      /\bexport\b/i.test(text) && !/\b(png|jpg|svg|video|mp4|webm|mov)\b/i.test(text),
+    );
     expect(
-      panelActionTexts.length,
-      "Animated product apps need separate footer delivery actions for Export Video and Export PNG.",
-    ).toBeGreaterThanOrEqual(2);
+      hasUnifiedExportAction || panelActionTexts.length >= 2,
+      "Animated product apps need Export Video and Export PNG footer actions, or one unified Export action gated by export.kind.",
+    ).toBe(true);
     expect(
       productImplementationSource,
       "Video export must use getToolcraftVideoExportSize so current and 4K dimensions follow the standard encoder-safe export contract.",

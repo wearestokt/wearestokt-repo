@@ -39,7 +39,7 @@ describe("appSchema", () => {
     );
   });
 
-  it("exposes product sections after Setup including Video Export", () => {
+  it("exposes product sections after Setup including unified Export Settings", () => {
     const productTitles =
       appSchema.panels.controls?.sections
         .filter((section) => section.title !== "Setup")
@@ -50,14 +50,14 @@ describe("appSchema", () => {
         "App Mode",
         "Source",
         "Grid Layout",
-        "Image Export",
-        "Video Export",
+        "Export Settings",
         "Export",
       ]),
     );
-    const imageIndex = productTitles.indexOf("Image Export");
-    const videoIndex = productTitles.indexOf("Video Export");
-    expect(videoIndex).toBe(imageIndex + 1);
+    expect(productTitles).not.toEqual(expect.arrayContaining(["Mask Shape", "Depth", "Image Export", "Video Export"]));
+    const exportIndex = productTitles.indexOf("Export Settings");
+    const actionsIndex = productTitles.indexOf("Export");
+    expect(actionsIndex).toBe(exportIndex + 1);
   });
 
   it("enables keyframe timeline for layout animation and video export", () => {

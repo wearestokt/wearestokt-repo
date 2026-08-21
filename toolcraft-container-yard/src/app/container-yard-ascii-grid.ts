@@ -8,7 +8,6 @@ import { useToolcraft } from "@/toolcraft/runtime/react";
 
 export const ASCII_GRID_DEFAULT_TARGETS = {
   "yard.columnGap": 3,
-  "yard.lengthMix": 0,
   "yard.randomGaps": 0,
   "yard.rotation": 0,
   "yard.rowGap": 3,

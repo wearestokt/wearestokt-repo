@@ -52,9 +52,7 @@ function delay(ms: number): Promise<void> {
 }
 
 function yieldToUi(): Promise<void> {
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
+  return delay(0);
 }
 
 async function withTimeout<T>(
